@@ -13,6 +13,8 @@ declare module '@strudel/core' {
     lpf(value: number): Pattern
   }
 
+  export function stack(...patterns: Pattern[]): Pattern
+
   export interface Scheduler {
     started: boolean
     setPattern(pattern: Pattern, autostart?: boolean): void
