@@ -1,5 +1,4 @@
 import {
-  initAudioOnFirstClick,
   getAudioContext,
   webaudioOutput,
   samples,
@@ -13,7 +12,11 @@ let audioInitialized = false;
 export async function initAudio() {
   if (audioInitialized) return;
 
-  await initAudioOnFirstClick();
+  // Get or create audio context
+  const ctx = getAudioContext();
+  if (ctx.state === 'suspended') {
+    await ctx.resume();
+  }
 
   // Register synth oscillators (sawtooth, sine, square, triangle)
   registerSynthSounds();
@@ -28,6 +31,11 @@ export async function playPattern(pattern: Pattern) {
   await initAudio();
 
   const ctx = getAudioContext();
+
+  // Resume audio context (required after user interaction)
+  if (ctx.state === 'suspended') {
+    await ctx.resume();
+  }
 
   if (!currentRepl) {
     currentRepl = await repl({
@@ -44,6 +52,12 @@ export async function playPattern(pattern: Pattern) {
   } catch (error) {
     console.error('Strudel error:', error);
     throw error;
+  }
+}
+
+export function updatePattern(pattern: Pattern) {
+  if (currentRepl && currentRepl.scheduler.started) {
+    currentRepl.scheduler.setPattern(pattern, false);
   }
 }
 
