@@ -42,6 +42,16 @@ function buildChain(
       };
     }
 
+    case 'note': {
+      const notesStr = node.data.notes;
+      // .note() with synth sound
+      const pattern = mini(notesStr).note().sound('sawtooth') as Pattern;
+      return {
+        pattern,
+        code: `"${notesStr}".note().sound("sawtooth")`,
+      };
+    }
+
     case 'transform': {
       if (sourceNodes.length === 0) return { pattern: null, code: '' };
       const source = buildChain(sourceNodes[0].id, nodes, edges);
@@ -51,7 +61,10 @@ function buildChain(
       let newPattern: Pattern;
       let newCode: string;
 
-      if (value !== undefined) {
+      // rev doesn't take a value
+      const hasValue = transform !== 'rev';
+
+      if (hasValue && value !== undefined) {
         newPattern = (
           source.pattern as unknown as Record<string, (v: number) => Pattern>
         )[transform](value);

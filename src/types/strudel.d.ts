@@ -1,6 +1,8 @@
 declare module '@strudel/core' {
   export interface Pattern {
     s(): Pattern
+    note(): Pattern
+    sound(name: string): Pattern
     fast(factor: number): Pattern
     slow(factor: number): Pattern
     rev(): Pattern
@@ -39,6 +41,7 @@ declare module '@strudel/webaudio' {
   export function getAudioContext(): AudioContext
   export function webaudioOutput(hap: unknown): void
   export function samples(url: string): Promise<void>
+  export function registerSynthSounds(): void
 }
 
 declare module '@strudel/soundfonts' {
