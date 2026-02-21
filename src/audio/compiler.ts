@@ -1,20 +1,37 @@
 import type { Edge } from '@xyflow/react';
-import type { Pattern } from '@strudel/core';
+import { type Pattern, stack } from '@strudel/core';
 import { mini } from '@strudel/mini';
 import type { AppNode } from '../nodes/types';
 
 /**
  * Compile the node graph into a Strudel Pattern
+ * Supports multiple Output nodes (tracks) combined with stack
  */
 export function compileGraph(
   nodes: AppNode[],
   edges: Edge[]
 ): { pattern: Pattern | null; code: string } {
-  const outputNode = nodes.find((n) => n.type === 'output');
-  if (!outputNode) return { pattern: null, code: '' };
+  const outputNodes = nodes.filter((n) => n.type === 'output');
+  if (outputNodes.length === 0) return { pattern: null, code: '' };
 
-  const result = buildChain(outputNode.id, nodes, edges);
-  return result;
+  const results = outputNodes
+    .map((outputNode) => buildChain(outputNode.id, nodes, edges))
+    .filter((r) => r.pattern !== null);
+
+  if (results.length === 0) return { pattern: null, code: '' };
+
+  if (results.length === 1) {
+    return results[0];
+  }
+
+  // Combine multiple tracks with stack
+  const patterns = results.map((r) => r.pattern as Pattern);
+  const codes = results.map((r) => r.code);
+
+  return {
+    pattern: stack(...patterns) as Pattern,
+    code: `stack(${codes.join(', ')})`,
+  };
 }
 
 function buildChain(
