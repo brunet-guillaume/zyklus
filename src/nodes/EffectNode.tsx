@@ -1,7 +1,12 @@
 import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react';
 import type { EffectNode as EffectNodeType, EffectNodeData } from './types';
 
-const EFFECTS: EffectNodeData['effect'][] = ['reverb', 'delay', 'gain'];
+const EFFECTS: { value: EffectNodeData['effect']; label: string }[] = [
+  { value: 'gain', label: 'Gain' },
+  { value: 'room', label: 'Reverb' },
+  { value: 'delay', label: 'Delay' },
+  { value: 'lpf', label: 'Low-pass' },
+];
 
 export function EffectNode({ id, data, selected }: NodeProps<EffectNodeType>) {
   const { updateNodeData } = useReactFlow();
@@ -29,8 +34,8 @@ export function EffectNode({ id, data, selected }: NodeProps<EffectNodeType>) {
           className="bg-green-950 border border-green-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-green-400"
         >
           {EFFECTS.map((e) => (
-            <option key={e} value={e}>
-              {e}
+            <option key={e.value} value={e.value}>
+              {e.label}
             </option>
           ))}
         </select>

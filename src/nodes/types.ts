@@ -14,7 +14,7 @@ export type TransformNodeData = {
 };
 
 export type EffectNodeData = {
-  effect: 'reverb' | 'delay' | 'gain';
+  effect: 'room' | 'delay' | 'gain' | 'lpf';
   value: number;
 };
 
