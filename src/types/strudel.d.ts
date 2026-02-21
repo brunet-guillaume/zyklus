@@ -8,8 +8,9 @@ declare module '@strudel/core' {
     rev(): Pattern
     stack(...patterns: Pattern[]): Pattern
     gain(value: number): Pattern
-    reverb(value: number): Pattern
+    room(value: number): Pattern
     delay(value: number): Pattern
+    lpf(value: number): Pattern
   }
 
   export interface Scheduler {
