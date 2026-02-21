@@ -1,2 +1,2 @@
 export { compileGraph } from './compiler';
-export { initAudio, playPattern, stopPattern, isPlaying } from './engine';
+export { initAudio, playPattern, updatePattern, stopPattern, isPlaying } from './engine';

@@ -10,11 +10,12 @@ import {
   ReactFlowProvider,
   type Connection,
   type Edge,
+  type IsValidConnection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes, type AppNode } from '../nodes';
-import { compileGraph, playPattern, stopPattern } from '../audio';
+import { compileGraph, playPattern, updatePattern, stopPattern, initAudio } from '../audio';
 import { ContextMenu } from './ContextMenu';
 
 const initialNodes: AppNode[] = [
@@ -73,6 +74,7 @@ function EditorContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [compiledCode, setCompiledCode] = useState('');
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -84,20 +86,58 @@ function EditorContent() {
   const { screenToFlowPosition } = useReactFlow();
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    (params: Connection) => {
+      setEdges((eds) => {
+        // Remove existing connections to the same target (single input per node)
+        const filtered = eds.filter((e) => e.target !== params.target);
+        return addEdge(params, filtered);
+      });
+    },
     [setEdges]
+  );
+
+  // Validate connections
+  const isValidConnection: IsValidConnection = useCallback(
+    (connection) => {
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const targetNode = nodes.find((n) => n.id === connection.target);
+
+      if (!sourceNode || !targetNode) return false;
+
+      // Can't connect to self
+      if (sourceNode.id === targetNode.id) return false;
+
+      // Sources (pattern, note) can't be targets
+      if (targetNode.type === 'pattern' || targetNode.type === 'note') return false;
+
+      // Output can't be a source
+      if (sourceNode.type === 'output') return false;
+
+      return true;
+    },
+    [nodes]
   );
 
   const handleCompile = useCallback(() => {
     const result = compileGraph(nodes, edges);
+
+    // Hot reload: only update if code changed
+    if (isPlaying && result.pattern && result.code !== compiledCode) {
+      updatePattern(result.pattern);
+    }
+
     setCompiledCode(result.code);
     return result;
-  }, [nodes, edges]);
+  }, [nodes, edges, isPlaying, compiledCode]);
 
   const handlePlay = useCallback(async () => {
-    const result = handleCompile();
-    if (result.pattern) {
-      try {
+    setIsLoading(true);
+    try {
+      // Initialize audio first (loads samples)
+      await initAudio();
+
+      const result = await handleCompile();
+      if (result.pattern) {
         await playPattern(result.pattern);
         setIsPlaying(true);
         setNodes((nds) =>
@@ -107,9 +147,11 @@ function EditorContent() {
               : n
           )
         );
-      } catch (error) {
-        console.error('Play error:', error);
       }
+    } catch (error) {
+      console.error('Play error:', error);
+    } finally {
+      setIsLoading(false);
     }
   }, [handleCompile, setNodes]);
 
@@ -166,13 +208,16 @@ function EditorContent() {
         <div className="flex gap-2">
           <button
             onClick={isPlaying ? handleStop : handlePlay}
+            disabled={isLoading}
             className={`px-4 py-2 rounded font-medium ${
-              isPlaying
-                ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-green-600 hover:bg-green-700'
+              isLoading
+                ? 'bg-gray-600 cursor-wait'
+                : isPlaying
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-green-600 hover:bg-green-700'
             }`}
           >
-            {isPlaying ? 'Stop' : 'Play'}
+            {isLoading ? 'Loading...' : isPlaying ? 'Stop' : 'Play'}
           </button>
           <button
             onClick={handleCompile}
@@ -197,7 +242,10 @@ function EditorContent() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onContextMenu={handleContextMenu}
+          isValidConnection={isValidConnection}
           nodeTypes={nodeTypes}
+          snapToGrid
+          snapGrid={[20, 20]}
           fitView
           className="bg-gray-950"
         >
