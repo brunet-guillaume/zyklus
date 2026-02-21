@@ -14,6 +14,7 @@ declare module '@strudel/core' {
   }
 
   export function stack(...patterns: Pattern[]): Pattern
+  export function pick(values: string[], indices: Pattern | string): Pattern
 
   export interface Scheduler {
     started: boolean

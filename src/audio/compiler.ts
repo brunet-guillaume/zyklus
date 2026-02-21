@@ -1,5 +1,5 @@
 import type { Edge } from '@xyflow/react';
-import { type Pattern, stack } from '@strudel/core';
+import { type Pattern, stack, pick } from '@strudel/core';
 import { mini } from '@strudel/mini';
 import type { AppNode } from '../nodes/types';
 
@@ -69,6 +69,35 @@ function buildChain(
       };
     }
 
+    case 'pick': {
+      const { values, indices } = node.data;
+
+      // Check if there's an Array node connected
+      const arraySource = sourceNodes.find((n) => n.type === 'array');
+      let valuesArray: string[];
+      let valuesCode: string;
+
+      if (arraySource) {
+        // Get values from connected Array node
+        const arrayResult = buildArray(arraySource.id, nodes, edges);
+        valuesArray = arrayResult.values;
+        valuesCode = arrayResult.code;
+      } else {
+        // Parse comma-separated values
+        valuesArray = values.split(',').map((v) => v.trim());
+        valuesCode = `[${valuesArray.map((v) => `"${v}"`).join(', ')}]`;
+      }
+
+      // Create pattern using pick function
+      const pattern = pick(valuesArray, mini(indices))
+        .note()
+        .sound('sawtooth') as Pattern;
+      return {
+        pattern,
+        code: `pick(${valuesCode}, "${indices}").note().sound("sawtooth")`,
+      };
+    }
+
     case 'transform': {
       if (sourceNodes.length === 0) return { pattern: null, code: '' };
       const source = buildChain(sourceNodes[0].id, nodes, edges);
@@ -119,4 +148,41 @@ function buildChain(
     default:
       return { pattern: null, code: '' };
   }
+}
+
+/**
+ * Build an array of values from an Array node
+ */
+function buildArray(
+  nodeId: string,
+  nodes: AppNode[],
+  edges: Edge[]
+): { values: string[]; code: string } {
+  const node = nodes.find((n) => n.id === nodeId);
+  if (!node || node.type !== 'array') return { values: [], code: '[]' };
+
+  // Find all incoming edges, sorted by target handle (input-0, input-1, etc.)
+  const incomingEdges = edges
+    .filter((e) => e.target === nodeId)
+    .sort((a, b) => {
+      const aIndex = parseInt(a.targetHandle?.split('-')[1] || '0');
+      const bIndex = parseInt(b.targetHandle?.split('-')[1] || '0');
+      return aIndex - bIndex;
+    });
+
+  const values: string[] = [];
+  const codes: string[] = [];
+
+  for (const edge of incomingEdges) {
+    const sourceNode = nodes.find((n) => n.id === edge.source);
+    if (sourceNode?.type === 'value') {
+      values.push(sourceNode.data.value);
+      codes.push(`"${sourceNode.data.value}"`);
+    }
+  }
+
+  return {
+    values,
+    code: `[${codes.join(', ')}]`,
+  };
 }

@@ -58,6 +58,12 @@ function getDefaultData(type: string) {
       return { pattern: 'bd sd' };
     case 'note':
       return { notes: 'c3 e3 g3' };
+    case 'value':
+      return { value: 'c3' };
+    case 'array':
+      return { inputCount: 2 };
+    case 'pick':
+      return { values: 'c3, e3, g3, c4', indices: '<0 1 2 3>' };
     case 'transform':
       return { transform: 'fast' as const, value: 2 };
     case 'effect':

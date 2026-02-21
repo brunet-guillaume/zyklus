@@ -8,6 +8,9 @@ interface ContextMenuProps {
 const NODE_OPTIONS = [
   { type: 'pattern', label: 'Pattern', color: 'text-purple-400' },
   { type: 'note', label: 'Note', color: 'text-pink-400' },
+  { type: 'value', label: 'Value', color: 'text-amber-400' },
+  { type: 'array', label: 'Array', color: 'text-indigo-400' },
+  { type: 'pick', label: 'Pick', color: 'text-cyan-400' },
   { type: 'transform', label: 'Transform', color: 'text-blue-400' },
   { type: 'effect', label: 'Effect', color: 'text-green-400' },
   { type: 'output', label: 'Output', color: 'text-orange-400' },
