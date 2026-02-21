@@ -41,7 +41,6 @@ declare module '@strudel/mini' {
 }
 
 declare module '@strudel/webaudio' {
-  export function initAudioOnFirstClick(): Promise<void>
   export function getAudioContext(): AudioContext
   export function webaudioOutput(hap: unknown): void
   export function samples(url: string): Promise<void>
