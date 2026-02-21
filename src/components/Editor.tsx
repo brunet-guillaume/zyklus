@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -6,6 +6,8 @@ import {
   addEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  ReactFlowProvider,
   type Connection,
   type Edge,
 } from '@xyflow/react';
@@ -13,6 +15,7 @@ import '@xyflow/react/dist/style.css';
 
 import { nodeTypes, type AppNode } from '../nodes';
 import { compileGraph, playPattern, stopPattern } from '../audio';
+import { ContextMenu } from './ContextMenu';
 
 const initialNodes: AppNode[] = [
   {
@@ -46,11 +49,39 @@ const initialEdges: Edge[] = [
   { id: 'e2-3', source: '2', target: '3' },
 ];
 
-export function Editor() {
+let nodeId = 5;
+const getNodeId = () => `${nodeId++}`;
+
+function getDefaultData(type: string) {
+  switch (type) {
+    case 'pattern':
+      return { pattern: 'bd sd' };
+    case 'note':
+      return { notes: 'c3 e3 g3' };
+    case 'transform':
+      return { transform: 'fast' as const, value: 2 };
+    case 'effect':
+      return { effect: 'gain' as const, value: 0.8 };
+    case 'output':
+      return { isPlaying: false };
+    default:
+      return {};
+  }
+}
+
+function EditorContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isPlaying, setIsPlaying] = useState(false);
   const [compiledCode, setCompiledCode] = useState('');
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    flowX: number;
+    flowY: number;
+  } | null>(null);
+  const flowRef = useRef<HTMLDivElement>(null);
+  const { screenToFlowPosition } = useReactFlow();
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -94,6 +125,39 @@ export function Editor() {
     );
   }, [setNodes]);
 
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      setContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        flowX: position.x,
+        flowY: position.y,
+      });
+    },
+    [screenToFlowPosition]
+  );
+
+  const handleAddNode = useCallback(
+    (type: string) => {
+      if (!contextMenu) return;
+
+      const newNode = {
+        id: getNodeId(),
+        type,
+        position: { x: contextMenu.flowX, y: contextMenu.flowY },
+        data: getDefaultData(type),
+      } as AppNode;
+
+      setNodes((nds) => [...nds, newNode]);
+    },
+    [contextMenu, setNodes]
+  );
+
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
@@ -125,13 +189,14 @@ export function Editor() {
       </div>
 
       {/* Flow Editor */}
-      <div className="flex-1">
+      <div className="flex-1" ref={flowRef}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onContextMenu={handleContextMenu}
           nodeTypes={nodeTypes}
           fitView
           className="bg-gray-950"
@@ -140,6 +205,23 @@ export function Editor() {
           <Controls className="bg-gray-800 border-gray-700" />
         </ReactFlow>
       </div>
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onAddNode={handleAddNode}
+        />
+      )}
     </div>
+  );
+}
+
+export function Editor() {
+  return (
+    <ReactFlowProvider>
+      <EditorContent />
+    </ReactFlowProvider>
   );
 }
