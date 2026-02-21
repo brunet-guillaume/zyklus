@@ -3,6 +3,7 @@ import {
   getAudioContext,
   webaudioOutput,
   samples,
+  registerSynthSounds,
 } from '@strudel/webaudio';
 import { repl, type Pattern } from '@strudel/core';
 
@@ -13,6 +14,9 @@ export async function initAudio() {
   if (audioInitialized) return;
 
   await initAudioOnFirstClick();
+
+  // Register synth oscillators (sawtooth, sine, square, triangle)
+  registerSynthSounds();
 
   // Load base samples (drums, etc.)
   await samples('github:tidalcycles/Dirt-Samples/master');

@@ -33,6 +33,12 @@ const initialNodes: AppNode[] = [
     position: { x: 600, y: 100 },
     data: { isPlaying: false },
   },
+  {
+    id: '4',
+    type: 'note',
+    position: { x: 100, y: 250 },
+    data: { notes: 'c3 e3 g3' },
+  },
 ];
 
 const initialEdges: Edge[] = [
