@@ -1,7 +1,16 @@
 import type { Edge } from '@xyflow/react';
-import { type Pattern, stack, pick } from '@strudel/core';
+import { type Pattern, stack, cat, pick, note } from '@strudel/core';
 import { mini } from '@strudel/mini';
 import type { AppNode } from '../nodes/types';
+
+// Result type for node compilation
+type BuildResult = {
+  pattern: Pattern | null;
+  code: string;
+  values?: string[]; // For nodes that output raw string values
+  patterns?: Pattern[]; // For nodes that output multiple patterns (Array)
+  patternCodes?: string[]; // Code for each pattern
+};
 
 /**
  * Compile the node graph into a Strudel Pattern
@@ -15,13 +24,13 @@ export function compileGraph(
   if (outputNodes.length === 0) return { pattern: null, code: '' };
 
   const results = outputNodes
-    .map((outputNode) => buildChain(outputNode.id, nodes, edges))
+    .map((outputNode) => buildNode(outputNode.id, nodes, edges))
     .filter((r) => r.pattern !== null);
 
   if (results.length === 0) return { pattern: null, code: '' };
 
   if (results.length === 1) {
-    return results[0];
+    return { pattern: results[0].pattern, code: results[0].code };
   }
 
   // Combine multiple tracks with stack
@@ -34,24 +43,43 @@ export function compileGraph(
   };
 }
 
-function buildChain(
+/**
+ * Build a node and return its result
+ * Each node builds independently and uses its inputs' results
+ */
+function buildNode(
   nodeId: string,
   nodes: AppNode[],
   edges: Edge[]
-): { pattern: Pattern | null; code: string } {
+): BuildResult {
   const node = nodes.find((n) => n.id === nodeId);
   if (!node) return { pattern: null, code: '' };
 
-  // Find incoming connected nodes
+  // Find incoming edges and build source nodes
   const incomingEdges = edges.filter((e) => e.target === nodeId);
-  const sourceNodes = incomingEdges
-    .map((e) => nodes.find((n) => n.id === e.source))
-    .filter(Boolean) as AppNode[];
+
+  // Get sources with their results (build each source first)
+  const sources = incomingEdges
+    .map((edge) => {
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      if (!sourceNode) return null;
+      return {
+        edge,
+        node: sourceNode,
+        result: buildNode(sourceNode.id, nodes, edges),
+      };
+    })
+    .filter(Boolean) as Array<{
+    edge: Edge;
+    node: AppNode;
+    result: BuildResult;
+  }>;
 
   switch (node.type) {
+    // === SOURCE NODES (no inputs) ===
+
     case 'pattern': {
       const patternStr = node.data.pattern;
-      // .s() marks values as audio samples
       const pattern = mini(patternStr).s() as Pattern;
       return {
         pattern,
@@ -59,56 +87,134 @@ function buildChain(
       };
     }
 
-    case 'note': {
-      const notesStr = node.data.notes;
-      // .note() with synth sound
-      const pattern = mini(notesStr).note().sound('sawtooth') as Pattern;
+    case 'value': {
+      // Value evaluates mini notation and returns a Pattern
+      const valueStr = node.data.value;
+      const pattern = mini(valueStr) as Pattern;
       return {
         pattern,
-        code: `"${notesStr}".note().sound("sawtooth")`,
+        code: `"${valueStr}"`,
+        patterns: [pattern],
+        patternCodes: [`"${valueStr}"`],
+      };
+    }
+
+    // === COLLECTOR NODE ===
+
+    case 'array': {
+      // Sort sources by their input handle index
+      const sortedSources = sources.sort((a, b) => {
+        const aIndex = parseInt(a.edge.targetHandle?.split('-')[1] || '0');
+        const bIndex = parseInt(b.edge.targetHandle?.split('-')[1] || '0');
+        return aIndex - bIndex;
+      });
+
+      // Collect patterns from all sources
+      const allPatterns: Pattern[] = [];
+      const allCodes: string[] = [];
+
+      for (const source of sortedSources) {
+        if (source.result.patterns) {
+          allPatterns.push(...source.result.patterns);
+          allCodes.push(...(source.result.patternCodes || []));
+        } else if (source.result.pattern) {
+          allPatterns.push(source.result.pattern);
+          allCodes.push(source.result.code);
+        }
+      }
+
+      return {
+        pattern: null,
+        code: `[${allCodes.join(', ')}]`,
+        patterns: allPatterns,
+        patternCodes: allCodes,
+      };
+    }
+
+    // === PATTERN GENERATORS ===
+
+    case 'note': {
+      // Check if there's an input
+      if (sources.length > 0) {
+        const source = sources[0].result;
+
+        // If source has multiple patterns (from Array), use cat to sequence them
+        if (source.patterns && source.patterns.length > 0) {
+          const combinedPattern = cat(...source.patterns) as Pattern;
+          const codesStr = source.patternCodes?.join(', ') || '';
+          const pattern = note(combinedPattern).sound('sawtooth') as Pattern;
+          return {
+            pattern,
+            code: `note(cat(${codesStr})).sound("sawtooth")`,
+          };
+        }
+
+        // If source has a single pattern, wrap it with note()
+        if (source.pattern) {
+          const pattern = note(source.pattern).sound('sawtooth') as Pattern;
+          return {
+            pattern,
+            code: `note(${source.code}).sound("sawtooth")`,
+          };
+        }
+      }
+
+      // Fallback to inline notes
+      const notesStr = node.data.notes;
+      const pattern = note(mini(notesStr)).sound('sawtooth') as Pattern;
+      return {
+        pattern,
+        code: `note("${notesStr}").sound("sawtooth")`,
       };
     }
 
     case 'pick': {
       const { values, indices } = node.data;
 
-      // Check if there's an Array node connected
-      const arraySource = sourceNodes.find((n) => n.type === 'array');
+      // Check if there's a source with patterns (from Array of Values)
+      const sourceWithPatterns = sources.find((s) => s.result.patterns);
+      if (sourceWithPatterns && sourceWithPatterns.result.patterns) {
+        const patterns = sourceWithPatterns.result.patterns;
+        const codes = sourceWithPatterns.result.patternCodes || [];
+        // Pass Pattern objects to pick
+        const pattern = pick(patterns as unknown as string[], mini(indices)) as Pattern;
+        return {
+          pattern,
+          code: `pick([${codes.join(', ')}], "${indices}")`,
+        };
+      }
+
+      // Fallback: use pick with string values
       let valuesArray: string[];
       let valuesCode: string;
 
-      if (arraySource) {
-        // Get values from connected Array node
-        const arrayResult = buildArray(arraySource.id, nodes, edges);
-        valuesArray = arrayResult.values;
-        valuesCode = arrayResult.code;
+      const sourceWithValues = sources.find((s) => s.result.values);
+      if (sourceWithValues) {
+        valuesArray = sourceWithValues.result.values!;
+        valuesCode = `[${valuesArray.map((v) => `"${v}"`).join(', ')}]`;
       } else {
-        // Parse comma-separated values
         valuesArray = values.split(',').map((v) => v.trim());
         valuesCode = `[${valuesArray.map((v) => `"${v}"`).join(', ')}]`;
       }
 
-      // Create pattern using pick function
-      const pattern = pick(valuesArray, mini(indices))
-        .note()
-        .sound('sawtooth') as Pattern;
+      const pattern = pick(valuesArray, mini(indices)) as Pattern;
       return {
         pattern,
-        code: `pick(${valuesCode}, "${indices}").note().sound("sawtooth")`,
+        code: `pick(${valuesCode}, "${indices}")`,
       };
     }
 
+    // === TRANSFORM NODES ===
+
     case 'transform': {
-      if (sourceNodes.length === 0) return { pattern: null, code: '' };
-      const source = buildChain(sourceNodes[0].id, nodes, edges);
-      if (!source.pattern) return { pattern: null, code: '' };
+      const source = sources[0]?.result;
+      if (!source?.pattern) return { pattern: null, code: '' };
 
       const { transform, value } = node.data;
+      const hasValue = transform !== 'rev';
+
       let newPattern: Pattern;
       let newCode: string;
-
-      // rev doesn't take a value
-      const hasValue = transform !== 'rev';
 
       if (hasValue && value !== undefined) {
         newPattern = (
@@ -126,63 +232,29 @@ function buildChain(
     }
 
     case 'effect': {
-      if (sourceNodes.length === 0) return { pattern: null, code: '' };
-      const source = buildChain(sourceNodes[0].id, nodes, edges);
-      if (!source.pattern) return { pattern: null, code: '' };
+      const source = sources[0]?.result;
+      if (!source?.pattern) return { pattern: null, code: '' };
 
       const { effect, value } = node.data;
       const newPattern = (
         source.pattern as unknown as Record<string, (v: number) => Pattern>
       )[effect](value);
-      const newCode = `${source.code}.${effect}(${value})`;
 
-      return { pattern: newPattern, code: newCode };
+      return {
+        pattern: newPattern,
+        code: `${source.code}.${effect}(${value})`,
+      };
     }
 
+    // === OUTPUT NODE ===
+
     case 'output': {
-      if (sourceNodes.length === 0) return { pattern: null, code: '' };
-      // For now, just take the first input
-      return buildChain(sourceNodes[0].id, nodes, edges);
+      const source = sources[0]?.result;
+      if (!source?.pattern) return { pattern: null, code: '' };
+      return source;
     }
 
     default:
       return { pattern: null, code: '' };
   }
-}
-
-/**
- * Build an array of values from an Array node
- */
-function buildArray(
-  nodeId: string,
-  nodes: AppNode[],
-  edges: Edge[]
-): { values: string[]; code: string } {
-  const node = nodes.find((n) => n.id === nodeId);
-  if (!node || node.type !== 'array') return { values: [], code: '[]' };
-
-  // Find all incoming edges, sorted by target handle (input-0, input-1, etc.)
-  const incomingEdges = edges
-    .filter((e) => e.target === nodeId)
-    .sort((a, b) => {
-      const aIndex = parseInt(a.targetHandle?.split('-')[1] || '0');
-      const bIndex = parseInt(b.targetHandle?.split('-')[1] || '0');
-      return aIndex - bIndex;
-    });
-
-  const values: string[] = [];
-  const codes: string[] = [];
-
-  for (const edge of incomingEdges) {
-    const sourceNode = nodes.find((n) => n.id === edge.source);
-    if (sourceNode?.type === 'value') {
-      values.push(sourceNode.data.value);
-      codes.push(`"${sourceNode.data.value}"`);
-    }
-  }
-
-  return {
-    values,
-    code: `[${codes.join(', ')}]`,
-  };
 }

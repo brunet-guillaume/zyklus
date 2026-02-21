@@ -94,8 +94,11 @@ function EditorContent() {
   const onConnect = useCallback(
     (params: Connection) => {
       setEdges((eds) => {
-        // Remove existing connections to the same target (single input per node)
-        const filtered = eds.filter((e) => e.target !== params.target);
+        // Remove existing connections to the same target handle (single input per handle)
+        const filtered = eds.filter(
+          (e) =>
+            e.target !== params.target || e.targetHandle !== params.targetHandle
+        );
         return addEdge(params, filtered);
       });
     },
@@ -113,8 +116,8 @@ function EditorContent() {
       // Can't connect to self
       if (sourceNode.id === targetNode.id) return false;
 
-      // Sources (pattern, note) can't be targets
-      if (targetNode.type === 'pattern' || targetNode.type === 'note') return false;
+      // Pattern nodes can't be targets (they are pure sources)
+      if (targetNode.type === 'pattern') return false;
 
       // Output can't be a source
       if (sourceNode.type === 'output') return false;

@@ -10,6 +10,11 @@ export function NoteNode({ id, data, selected }: NodeProps<NoteNodeType>) {
         selected ? 'border-pink-400' : 'border-pink-700'
       }`}
     >
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="w-3 h-3 bg-pink-400"
+      />
       <div className="text-xs text-pink-300 mb-1">Note</div>
       <input
         type="text"

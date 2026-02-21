@@ -15,13 +15,17 @@ export function ArrayNode({ id, data, selected }: NodeProps<ArrayNodeType>) {
     }
   };
 
+  // Calculate positions: title (16px + 8px margin) + padding (12px) = 36px start
+  // Each row: 20px height + 4px gap = 24px per row, center offset = 10px
+  const getHandleTop = (index: number) => 36 + index * 24 + 10;
+
   return (
     <div
       className={`relative px-4 py-3 rounded-lg bg-indigo-900 border-2 ${
         selected ? 'border-indigo-400' : 'border-indigo-700'
       }`}
     >
-      {/* Input handles - positioned absolutely */}
+      {/* Input handles - positioned absolutely to align with labels */}
       {Array.from({ length: inputCount }).map((_, i) => (
         <Handle
           key={i}
@@ -29,7 +33,7 @@ export function ArrayNode({ id, data, selected }: NodeProps<ArrayNodeType>) {
           position={Position.Left}
           id={`input-${i}`}
           className="w-3 h-3 bg-indigo-400"
-          style={{ top: `${32 + i * 24}px` }}
+          style={{ top: getHandleTop(i) }}
         />
       ))}
 
