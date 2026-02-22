@@ -4,6 +4,7 @@ import {
   useNodes,
   type EdgeProps,
 } from '@xyflow/react';
+import { useTrigger } from '../hooks/useTrigger';
 
 export function GradientEdge({
   id,
@@ -22,6 +23,8 @@ export function GradientEdge({
   const nodes = useNodes();
   const sourceNode = nodes.find((n) => n.id === source);
   const targetNode = nodes.find((n) => n.id === target);
+  const { isTriggered: sourceTriggered } = useTrigger(source);
+  const { isTriggered: targetTriggered } = useTrigger(target);
 
   const [edgePath] = getBezierPath({
     sourceX,
@@ -40,6 +43,9 @@ export function GradientEdge({
     ? `var(--${targetNode.type})`
     : '#F472B6';
 
+  const isTriggered = sourceTriggered && targetTriggered;
+  const strokeWidth = selected ? 3 : isTriggered ? 3.5 : 1;
+
   return (
     <>
       <defs>
@@ -55,13 +61,25 @@ export function GradientEdge({
           <stop offset="100%" stopColor={targetColor} />
         </linearGradient>
       </defs>
+      <path
+        d={edgePath}
+        fill="none"
+        stroke="var(--background)"
+        strokeLinecap="round"
+        opacity={0.8}
+        style={{
+          strokeWidth: strokeWidth + 4,
+          transition: 'stroke-width 0.3s ease-out',
+        }}
+      />
       <BaseEdge
         id={id}
         path={edgePath}
         style={{
           ...style,
           stroke: `url(#${gradientId})`,
-          strokeWidth: selected ? 3 : 1.5,
+          strokeWidth,
+          transition: 'stroke-width 0.3s ease-out',
         }}
         markerEnd={markerEnd}
       />

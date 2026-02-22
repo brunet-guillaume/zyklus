@@ -1,10 +1,12 @@
 import { useReactFlow, useEdges, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { FastNode as FastNodeType } from './types';
+import { useTrigger } from '../hooks/useTrigger';
 
 export function FastNode({ id, data, selected }: NodeProps<FastNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
+  const { isTriggered: triggered } = useTrigger(id);
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -25,6 +27,7 @@ export function FastNode({ id, data, selected }: NodeProps<FastNodeType>) {
       inputs={1}
       outputs={1}
       selected={selected}
+      triggered={triggered}
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
     >

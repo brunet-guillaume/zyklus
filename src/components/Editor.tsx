@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -17,70 +17,34 @@ import '@xyflow/react/dist/style.css';
 import { nodeTypes, type AppNode } from '../nodes';
 import { compileGraph, initAudio, playCode, stopPlayback } from '../audio';
 import { ContextMenu } from './ContextMenu';
+import { NodePalette } from './NodePalette';
 import { GradientEdge } from './GradientEdge';
+import defaultCanvas from '../default-canvas.json';
 
 const edgeTypes = {
   gradient: GradientEdge,
 };
 
-const initialNodes: AppNode[] = [
-  {
-    id: '0',
-    type: 'value',
-    position: { x: -400, y: 100 },
-    data: { value: 'g3 c3 f2' },
-  },
-  {
-    id: '1',
-    type: 'note',
-    position: { x: 100, y: 100 },
-    data: {},
-  },
-  {
-    id: '2',
-    type: 'fast',
-    position: { x: 350, y: 100 },
-    data: { value: 2 },
-  },
-  {
-    id: '3',
-    type: 'output',
-    position: { x: 600, y: 100 },
-    data: { isPlaying: false },
-  },
-  {
-    id: '4',
-    type: 'note',
-    position: { x: 100, y: 250 },
-    data: { note: 'c3 e3 g3' },
-  },
-];
+const STORAGE_KEY = 'zyklus-canvas';
 
-const initialEdges: Edge[] = [
-  {
-    id: 'e0-1',
-    source: '0',
-    sourceHandle: 'out-0',
-    target: '1',
-    targetHandle: 'in-0',
-  },
-  {
-    id: 'e1-2',
-    source: '1',
-    sourceHandle: 'out-0',
-    target: '2',
-    targetHandle: 'in-0',
-  },
-  {
-    id: 'e2-3',
-    source: '2',
-    sourceHandle: 'out-0',
-    target: '3',
-    targetHandle: 'in-0',
-  },
-];
+function loadFromStorage(): { nodes: AppNode[]; edges: Edge[] } | null {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load from localStorage:', e);
+  }
+  return null;
+}
 
-let nodeId = 5;
+const savedCanvas = loadFromStorage();
+const initialNodes = (savedCanvas?.nodes ?? defaultCanvas.nodes) as AppNode[];
+const initialEdges = (savedCanvas?.edges ?? defaultCanvas.edges) as Edge[];
+
+// Calculate initial nodeId from existing nodes
+let nodeId = Math.max(...initialNodes.map((n) => parseInt(n.id) || 0), 0) + 1;
 const getNodeId = () => `${nodeId++}`;
 
 function getDefaultData(type: string) {
@@ -130,8 +94,68 @@ function EditorContent() {
     flowX: number;
     flowY: number;
   } | null>(null);
+  const [palette, setPalette] = useState<{
+    x: number;
+    y: number;
+    flowX: number;
+    flowY: number;
+  } | null>(null);
   const flowRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
+
+  // Auto-save to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }));
+  }, [nodes, edges]);
+
+  // Track mouse position
+  const mousePos = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      mousePos.current = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  // Space key to open palette at cursor
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input/textarea
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      if (e.code === 'Space' && !palette) {
+        e.preventDefault();
+        const { x, y } = mousePos.current;
+        const flowPos = screenToFlowPosition({ x, y });
+        setPalette({
+          x,
+          y,
+          flowX: flowPos.x,
+          flowY: flowPos.y,
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [palette, screenToFlowPosition]);
+
+  const handleReset = useCallback(() => {
+    if (confirm('Reset to default canvas? All changes will be lost.')) {
+      localStorage.removeItem(STORAGE_KEY);
+      setNodes(defaultCanvas.nodes as AppNode[]);
+      setEdges(defaultCanvas.edges as Edge[]);
+      nodeId =
+        Math.max(...defaultCanvas.nodes.map((n) => parseInt(n.id) || 0), 0) + 1;
+    }
+  }, [setNodes, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -246,6 +270,63 @@ function EditorContent() {
     [contextMenu, setNodes]
   );
 
+  const handlePaletteSelect = useCallback(
+    (type: string) => {
+      if (!palette) return;
+
+      const newNode = {
+        id: getNodeId(),
+        type,
+        position: { x: palette.flowX, y: palette.flowY },
+        data: getDefaultData(type),
+      } as AppNode;
+
+      setNodes((nds) => [...nds, newNode]);
+      setPalette(null);
+    },
+    [palette, setNodes]
+  );
+
+  const handleSave = useCallback(() => {
+    const data = JSON.stringify({ nodes, edges }, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'zyklus-patch.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [nodes, edges]);
+
+  const handleLoad = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target?.result as string);
+          if (data.nodes && data.edges) {
+            setNodes(data.nodes);
+            setEdges(data.edges);
+            // Update nodeId counter to avoid collisions
+            const maxId = Math.max(
+              ...data.nodes.map((n: AppNode) => parseInt(n.id) || 0)
+            );
+            nodeId = maxId + 1;
+          }
+        } catch (err) {
+          console.error('Failed to load file:', err);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }, [setNodes, setEdges]);
+
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
@@ -270,6 +351,24 @@ function EditorContent() {
             className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600"
           >
             Compile
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600"
+          >
+            Save
+          </button>
+          <button
+            onClick={handleLoad}
+            className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600"
+          >
+            Load
+          </button>
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600"
+          >
+            Reset
           </button>
         </div>
         {compiledCode && (
@@ -307,6 +406,15 @@ function EditorContent() {
           y={contextMenu.y}
           onClose={() => setContextMenu(null)}
           onAddNode={handleAddNode}
+        />
+      )}
+
+      {palette && (
+        <NodePalette
+          x={palette.x}
+          y={palette.y}
+          onSelect={handlePaletteSelect}
+          onClose={() => setPalette(null)}
         />
       )}
     </div>
