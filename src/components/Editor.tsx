@@ -15,21 +15,32 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes, type AppNode } from '../nodes';
-import { compileGraph, playPattern, updatePattern, stopPattern, initAudio } from '../audio';
+import { compileGraph, initAudio, playCode, stopPlayback } from '../audio';
 import { ContextMenu } from './ContextMenu';
+import { GradientEdge } from './GradientEdge';
+
+const edgeTypes = {
+  gradient: GradientEdge,
+};
 
 const initialNodes: AppNode[] = [
   {
+    id: '0',
+    type: 'value',
+    position: { x: -400, y: 100 },
+    data: { value: 'g3 c3 f2' },
+  },
+  {
     id: '1',
-    type: 'pattern',
+    type: 'note',
     position: { x: 100, y: 100 },
-    data: { pattern: 'bd sd' },
+    data: {},
   },
   {
     id: '2',
-    type: 'transform',
+    type: 'fast',
     position: { x: 350, y: 100 },
-    data: { transform: 'fast', value: 2 },
+    data: { value: 2 },
   },
   {
     id: '3',
@@ -41,13 +52,32 @@ const initialNodes: AppNode[] = [
     id: '4',
     type: 'note',
     position: { x: 100, y: 250 },
-    data: { notes: 'c3 e3 g3' },
+    data: { note: 'c3 e3 g3' },
   },
 ];
 
 const initialEdges: Edge[] = [
-  { id: 'e1-2', source: '1', target: '2' },
-  { id: 'e2-3', source: '2', target: '3' },
+  {
+    id: 'e0-1',
+    source: '0',
+    sourceHandle: 'out-0',
+    target: '1',
+    targetHandle: 'in-0',
+  },
+  {
+    id: 'e1-2',
+    source: '1',
+    sourceHandle: 'out-0',
+    target: '2',
+    targetHandle: 'in-0',
+  },
+  {
+    id: 'e2-3',
+    source: '2',
+    sourceHandle: 'out-0',
+    target: '3',
+    targetHandle: 'in-0',
+  },
 ];
 
 let nodeId = 5;
@@ -55,14 +85,32 @@ const getNodeId = () => `${nodeId++}`;
 
 function getDefaultData(type: string) {
   switch (type) {
-    case 'pattern':
-      return { pattern: 'bd sd' };
+    case 'sound':
+      return {};
     case 'note':
-      return { notes: 'c3 e3 g3' };
-    case 'transform':
-      return { transform: 'fast' as const, value: 2 };
-    case 'effect':
-      return { effect: 'gain' as const, value: 0.8 };
+      return {};
+    case 'code':
+      return { code: 'c3 e3 g3' };
+    case 'value':
+      return { value: 'c3' };
+    case 'array':
+      return { inputCount: 2 };
+    case 'pick':
+      return { values: 'c3, e3, g3, c4', indices: '<0 1 2 3>' };
+    case 'fast':
+      return { value: 2 };
+    case 'slow':
+      return { value: 2 };
+    case 'rev':
+      return {};
+    case 'gain':
+      return { value: 0.8 };
+    case 'reverb':
+      return { value: 0.5 };
+    case 'delay':
+      return { value: 0.5 };
+    case 'lpf':
+      return { value: 1000 };
     case 'output':
       return { isPlaying: false };
     default:
@@ -88,8 +136,11 @@ function EditorContent() {
   const onConnect = useCallback(
     (params: Connection) => {
       setEdges((eds) => {
-        // Remove existing connections to the same target (single input per node)
-        const filtered = eds.filter((e) => e.target !== params.target);
+        // Remove existing connections to the same target handle (single input per handle)
+        const filtered = eds.filter(
+          (e) =>
+            e.target !== params.target || e.targetHandle !== params.targetHandle
+        );
         return addEdge(params, filtered);
       });
     },
@@ -107,9 +158,6 @@ function EditorContent() {
       // Can't connect to self
       if (sourceNode.id === targetNode.id) return false;
 
-      // Sources (pattern, note) can't be targets
-      if (targetNode.type === 'pattern' || targetNode.type === 'note') return false;
-
       // Output can't be a source
       if (sourceNode.type === 'output') return false;
 
@@ -118,27 +166,25 @@ function EditorContent() {
     [nodes]
   );
 
-  const handleCompile = useCallback(() => {
-    const result = compileGraph(nodes, edges);
+  const handleCompile = useCallback(async () => {
+    const code = compileGraph(nodes, edges);
+    setCompiledCode(code);
 
-    // Hot reload: only update if code changed
-    if (isPlaying && result.pattern && result.code !== compiledCode) {
-      updatePattern(result.pattern);
+    // Hot reload: if playing, update the pattern
+    if (isPlaying && code) {
+      await playCode(code);
     }
 
-    setCompiledCode(result.code);
-    return result;
-  }, [nodes, edges, isPlaying, compiledCode]);
+    return code;
+  }, [nodes, edges, isPlaying]);
 
   const handlePlay = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Initialize audio first (loads samples)
       await initAudio();
-
-      const result = await handleCompile();
-      if (result.pattern) {
-        await playPattern(result.pattern);
+      const code = await handleCompile();
+      if (code) {
+        await playCode(code);
         setIsPlaying(true);
         setNodes((nds) =>
           nds.map((n) =>
@@ -155,8 +201,8 @@ function EditorContent() {
     }
   }, [handleCompile, setNodes]);
 
-  const handleStop = useCallback(() => {
-    stopPattern();
+  const handleStop = useCallback(async () => {
+    await stopPlayback();
     setIsPlaying(false);
     setNodes((nds) =>
       nds.map((n) =>
@@ -244,13 +290,14 @@ function EditorContent() {
           onContextMenu={handleContextMenu}
           isValidConnection={isValidConnection}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          defaultEdgeOptions={{ type: 'gradient' }}
           snapToGrid
           snapGrid={[20, 20]}
           fitView
-          className="bg-gray-950"
         >
-          <Background color="#333" gap={20} />
-          <Controls className="bg-gray-800 border-gray-700" />
+          <Background color="#424A72" gap={20} />
+          <Controls />
         </ReactFlow>
       </div>
 

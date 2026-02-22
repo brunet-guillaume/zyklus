@@ -1,122 +1,135 @@
 import type { Edge } from '@xyflow/react';
-import { type Pattern, stack } from '@strudel/core';
-import { mini } from '@strudel/mini';
 import type { AppNode } from '../nodes/types';
 
 /**
- * Compile the node graph into a Strudel Pattern
- * Supports multiple Output nodes (tracks) combined with stack
+ * Compile the node graph into Strudel code string
+ * Does NOT evaluate - just generates the code
  */
-export function compileGraph(
-  nodes: AppNode[],
-  edges: Edge[]
-): { pattern: Pattern | null; code: string } {
+export function compileGraph(nodes: AppNode[], edges: Edge[]): string {
   const outputNodes = nodes.filter((n) => n.type === 'output');
-  if (outputNodes.length === 0) return { pattern: null, code: '' };
+  if (outputNodes.length === 0) return '';
 
-  const results = outputNodes
-    .map((outputNode) => buildChain(outputNode.id, nodes, edges))
-    .filter((r) => r.pattern !== null);
+  // Build code for each output
+  const codes = outputNodes
+    .map((outputNode) => buildCode(outputNode.id, nodes, edges))
+    .filter((code) => code !== '');
 
-  if (results.length === 0) return { pattern: null, code: '' };
+  if (codes.length === 0) return '';
 
-  if (results.length === 1) {
-    return results[0];
-  }
-
-  // Combine multiple tracks with stack
-  const patterns = results.map((r) => r.pattern as Pattern);
-  const codes = results.map((r) => r.code);
-
-  return {
-    pattern: stack(...patterns) as Pattern,
-    code: `stack(${codes.join(', ')})`,
-  };
+  // Combine multiple outputs with stack
+  return codes.length === 1 ? codes[0] : `stack(${codes.join(', ')})`;
 }
 
-function buildChain(
-  nodeId: string,
-  nodes: AppNode[],
-  edges: Edge[]
-): { pattern: Pattern | null; code: string } {
+/**
+ * Build code string for a node
+ * Each node just returns a string, no Pattern evaluation
+ */
+function buildCode(nodeId: string, nodes: AppNode[], edges: Edge[]): string {
   const node = nodes.find((n) => n.id === nodeId);
-  if (!node) return { pattern: null, code: '' };
+  if (!node) return '';
 
-  // Find incoming connected nodes
+  // Find incoming edges and get source codes
   const incomingEdges = edges.filter((e) => e.target === nodeId);
-  const sourceNodes = incomingEdges
-    .map((e) => nodes.find((n) => n.id === e.source))
-    .filter(Boolean) as AppNode[];
+  const sourceCodes = incomingEdges
+    .map((edge) => {
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      if (!sourceNode) return { edge, code: '' };
+      return {
+        edge,
+        code: buildCode(sourceNode.id, nodes, edges),
+      };
+    })
+    .filter((s) => s.code !== '');
 
   switch (node.type) {
-    case 'pattern': {
-      const patternStr = node.data.pattern;
-      // .s() marks values as audio samples
-      const pattern = mini(patternStr).s() as Pattern;
-      return {
-        pattern,
-        code: `"${patternStr}".s()`,
-      };
+    // === SOURCE NODES ===
+
+    case 'sound':
+      if (sourceCodes.length > 0) return `${sourceCodes[0].code}.s()`;
+      return `"${node.data.sound}".s()`;
+
+    case 'code':
+      return node.data.code;
+
+    case 'value':
+      return `"${node.data.value}"`;
+
+    // === COLLECTOR NODE ===
+
+    case 'array': {
+      // Sort by input handle index
+      const sorted = sourceCodes.sort((a, b) => {
+        const aIdx = parseInt(a.edge.targetHandle?.split('-')[1] || '0');
+        const bIdx = parseInt(b.edge.targetHandle?.split('-')[1] || '0');
+        return aIdx - bIdx;
+      });
+      return `[${sorted.map((s) => s.code).join(', ')}]`;
     }
+
+    // === PATTERN GENERATORS ===
 
     case 'note': {
-      const notesStr = node.data.notes;
-      // .note() with synth sound
-      const pattern = mini(notesStr).note().sound('sawtooth') as Pattern;
-      return {
-        pattern,
-        code: `"${notesStr}".note().sound("sawtooth")`,
-      };
+      if (sourceCodes.length > 0) return `note(${sourceCodes[0].code})`;
+      return `"note(${node.data.note})"`;
     }
 
-    case 'transform': {
-      if (sourceNodes.length === 0) return { pattern: null, code: '' };
-      const source = buildChain(sourceNodes[0].id, nodes, edges);
-      if (!source.pattern) return { pattern: null, code: '' };
-
-      const { transform, value } = node.data;
-      let newPattern: Pattern;
-      let newCode: string;
-
-      // rev doesn't take a value
-      const hasValue = transform !== 'rev';
-
-      if (hasValue && value !== undefined) {
-        newPattern = (
-          source.pattern as unknown as Record<string, (v: number) => Pattern>
-        )[transform](value);
-        newCode = `${source.code}.${transform}(${value})`;
-      } else {
-        newPattern = (
-          source.pattern as unknown as Record<string, () => Pattern>
-        )[transform]();
-        newCode = `${source.code}.${transform}()`;
-      }
-
-      return { pattern: newPattern, code: newCode };
+    case 'pick': {
+      // in-0: array/values, in-1: indices pattern
+      const valuesInput = sourceCodes.find(
+        (s) => s.edge.targetHandle === 'in-0'
+      );
+      const indicesInput = sourceCodes.find(
+        (s) => s.edge.targetHandle === 'in-1'
+      );
+      if (!valuesInput || !indicesInput) return '';
+      return `pick(${valuesInput.code}, ${indicesInput.code})`;
     }
 
-    case 'effect': {
-      if (sourceNodes.length === 0) return { pattern: null, code: '' };
-      const source = buildChain(sourceNodes[0].id, nodes, edges);
-      if (!source.pattern) return { pattern: null, code: '' };
+    // === TRANSFORM NODES ===
 
-      const { effect, value } = node.data;
-      const newPattern = (
-        source.pattern as unknown as Record<string, (v: number) => Pattern>
-      )[effect](value);
-      const newCode = `${source.code}.${effect}(${value})`;
-
-      return { pattern: newPattern, code: newCode };
+    case 'fast': {
+      if (sourceCodes.length === 0) return '';
+      return `${sourceCodes[0].code}.fast(${node.data.value})`;
     }
+
+    case 'slow': {
+      if (sourceCodes.length === 0) return '';
+      return `${sourceCodes[0].code}.slow(${node.data.value})`;
+    }
+
+    case 'rev': {
+      if (sourceCodes.length === 0) return '';
+      return `${sourceCodes[0].code}.rev()`;
+    }
+
+    case 'gain': {
+      if (sourceCodes.length === 0) return '';
+      return `${sourceCodes[0].code}.gain(${node.data.value})`;
+    }
+
+    case 'reverb': {
+      if (sourceCodes.length === 0) return '';
+      return `${sourceCodes[0].code}.room(${node.data.value})`;
+    }
+
+    case 'delay': {
+      if (sourceCodes.length === 0) return '';
+      return `${sourceCodes[0].code}.delay(${node.data.value})`;
+    }
+
+    case 'lpf': {
+      if (sourceCodes.length === 0) return '';
+      return `${sourceCodes[0].code}.lpf(${node.data.value})`;
+    }
+
+    // === OUTPUT NODE ===
 
     case 'output': {
-      if (sourceNodes.length === 0) return { pattern: null, code: '' };
-      // For now, just take the first input
-      return buildChain(sourceNodes[0].id, nodes, edges);
+      if (sourceCodes.length === 0) return '';
+      return sourceCodes[0].code;
     }
 
     default:
-      return { pattern: null, code: '' };
+      return '';
   }
 }

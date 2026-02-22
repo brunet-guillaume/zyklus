@@ -1,8 +1,8 @@
 import { useEdges, type NodeProps } from '@xyflow/react';
-import type { NoteNode as NoteNodeType } from './types';
 import { BaseNode } from './BaseNode';
+import type { SoundNode as SoundNodeType } from './types';
 
-export function NoteNode({ id, selected }: NodeProps<NoteNodeType>) {
+export function SoundNode({ id, selected }: NodeProps<SoundNodeType>) {
   const edges = useEdges();
 
   const inputErrorFn = (index: number) => {
@@ -20,8 +20,8 @@ export function NoteNode({ id, selected }: NodeProps<NoteNodeType>) {
 
   return (
     <BaseNode
-      type="note"
-      label="Note"
+      type="sound"
+      label="Sound"
       inputs={1}
       outputs={1}
       selected={selected}
