@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 interface ContextMenuProps {
   x: number;
   y: number;
@@ -5,47 +7,131 @@ interface ContextMenuProps {
   onAddNode: (type: string) => void;
 }
 
-const NODE_OPTIONS = [
-  { type: 'sound', label: 'Sound', color: 'text-purple-400' },
-  { type: 'note', label: 'Note', color: 'text-pink-400' },
-  { type: 'code', label: 'Code', color: 'text-emerald-400' },
-  { type: 'value', label: 'Value', color: 'text-amber-400' },
-  { type: 'array', label: 'Array', color: 'text-indigo-400' },
-  { type: 'pick', label: 'Pick', color: 'text-cyan-400' },
-  { type: 'fast', label: 'Fast', color: 'text-blue-400' },
-  { type: 'slow', label: 'Slow', color: 'text-blue-400' },
-  { type: 'rev', label: 'Rev', color: 'text-blue-400' },
-  { type: 'gain', label: 'Gain', color: 'text-green-400' },
-  { type: 'reverb', label: 'Reverb', color: 'text-green-400' },
-  { type: 'delay', label: 'Delay', color: 'text-green-400' },
-  { type: 'lpf', label: 'Low-pass', color: 'text-green-400' },
-  { type: 'output', label: 'Output', color: 'text-orange-400' },
+const NODE_CATEGORIES = [
+  {
+    label: 'Sources',
+    nodes: [
+      { type: 'value', label: 'Value' },
+      { type: 'code', label: 'Code' },
+    ],
+  },
+  {
+    label: 'Generators',
+    nodes: [
+      { type: 'sound', label: 'Sound' },
+      { type: 'note', label: 'Note' },
+    ],
+  },
+  {
+    label: 'Collections',
+    nodes: [
+      { type: 'array', label: 'Array' },
+      { type: 'pick', label: 'Pick' },
+    ],
+  },
+  {
+    label: 'Transform',
+    nodes: [
+      { type: 'fast', label: 'Fast' },
+      { type: 'slow', label: 'Slow' },
+      { type: 'rev', label: 'Rev' },
+    ],
+  },
+  {
+    label: 'Effects',
+    nodes: [
+      { type: 'gain', label: 'Gain' },
+      { type: 'reverb', label: 'Reverb' },
+      { type: 'delay', label: 'Delay' },
+      { type: 'lpf', label: 'Low-pass' },
+    ],
+  },
+  {
+    label: 'Output',
+    nodes: [{ type: 'output', label: 'Output' }],
+  },
 ];
 
+// Estimated menu dimensions for initial positioning
+const MENU_WIDTH = 160;
+const MENU_HEIGHT = 200;
+
+function adjustPosition(x: number, y: number): { x: number; y: number } {
+  const newX = x + MENU_WIDTH > window.innerWidth ? x - MENU_WIDTH : x;
+  const newY = y + MENU_HEIGHT > window.innerHeight ? y - MENU_HEIGHT : y;
+  return { x: Math.max(0, newX), y: Math.max(0, newY) };
+}
+
 export function ContextMenu({ x, y, onClose, onAddNode }: ContextMenuProps) {
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
+
+  // Compute position once on render (no effect needed)
+  const position = adjustPosition(x, y);
+
   return (
     <>
       <div className="fixed inset-0" onClick={onClose} />
       <div
-        className="fixed bg-gray-800 border border-gray-600 rounded-lg shadow-xl py-2 z-50"
-        style={{ left: x, top: y }}
+        className="fixed bg-gray-800 border border-gray-600 rounded-lg shadow-xl py-1 z-50 min-w-40"
+        style={{ left: position.x, top: position.y }}
       >
-        <div className="px-3 py-1 text-xs text-gray-400 uppercase">
-          Add Node
-        </div>
-        {NODE_OPTIONS.map((option) => (
-          <button
-            key={option.type}
-            onClick={() => {
-              onAddNode(option.type);
-              onClose();
-            }}
-            className={`w-full px-4 py-2 text-left hover:bg-gray-700 ${option.color}`}
+        {NODE_CATEGORIES.map((category) => (
+          <div
+            key={category.label}
+            className="relative"
+            onMouseEnter={() => setOpenCategory(category.label)}
           >
-            {option.label}
-          </button>
+            <button
+              className={`w-full px-3 py-1.5 text-left text-sm text-gray-200 flex justify-between items-center ${
+                openCategory === category.label
+                  ? 'bg-gray-700'
+                  : 'hover:bg-gray-700'
+              }`}
+            >
+              {category.label}
+              <span className="text-gray-500 ml-4">›</span>
+            </button>
+
+            {/* Submenu with hover bridge */}
+            {openCategory === category.label && (
+              <div
+                className="absolute top-0 left-full"
+                style={{ paddingLeft: 4 }}
+              >
+                <Submenu
+                  nodes={category.nodes}
+                  onSelect={(type) => {
+                    onAddNode(type);
+                    onClose();
+                  }}
+                />
+              </div>
+            )}
+          </div>
         ))}
       </div>
     </>
+  );
+}
+
+interface SubmenuProps {
+  nodes: { type: string; label: string }[];
+  onSelect: (type: string) => void;
+}
+
+function Submenu({ nodes, onSelect }: SubmenuProps) {
+  return (
+    <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-xl py-1 min-w-32">
+      {nodes.map((node) => (
+        <button
+          key={node.type}
+          onClick={() => onSelect(node.type)}
+          className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700"
+          style={{ color: `var(--${node.type})` }}
+        >
+          {node.label}
+        </button>
+      ))}
+    </div>
   );
 }

@@ -1,9 +1,11 @@
 import { useEdges, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { PickNode as PickNodeType } from './types';
+import { useTrigger } from '../hooks/useTrigger';
 
 export function PickNode({ id, selected }: NodeProps<PickNodeType>) {
   const edges = useEdges();
+  const { isTriggered: triggered } = useTrigger(id);
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -24,9 +26,10 @@ export function PickNode({ id, selected }: NodeProps<PickNodeType>) {
       inputs={2}
       outputs={1}
       selected={selected}
+      triggered={triggered}
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
-      inputLabels={['values', 'indices']}
+      inputLabels={['Values', 'Indices']}
     />
   );
 }

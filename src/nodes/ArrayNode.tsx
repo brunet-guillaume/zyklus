@@ -1,10 +1,12 @@
 import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { ArrayNode as ArrayNodeType } from './types';
+import { useTrigger } from '../hooks/useTrigger';
 
 export function ArrayNode({ id, data, selected }: NodeProps<ArrayNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
+  const { isTriggered: triggered } = useTrigger(id);
   const inputCount = data.inputCount || 2;
 
   const addInput = () => {
@@ -34,10 +36,10 @@ export function ArrayNode({ id, data, selected }: NodeProps<ArrayNodeType>) {
   return (
     <BaseNode
       type="array"
-      label="Array"
       inputs={inputCount}
       outputs={1}
       selected={selected}
+      triggered={triggered}
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
       inputLabels={inputLabels}
@@ -46,14 +48,14 @@ export function ArrayNode({ id, data, selected }: NodeProps<ArrayNodeType>) {
       <div className="grid grid-cols-2 gap-1 mt-2">
         <button
           onClick={addInput}
-          className="px-2 py-0.5 w-full text-xs bg-(--background) hover:opacity-80 rounded border-b"
+          className="px-2 py-0.5 w-full text-xs bg-black/30 hover:opacity-80 rounded border-b"
         >
           +
         </button>
         <button
           onClick={removeInput}
           disabled={inputCount <= 2}
-          className="px-2 py-0.5 w-full text-xs bg-(--background) hover:opacity-80 rounded border-b disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 py-0.5 w-full text-xs bg-black/30 hover:opacity-80 rounded border-b disabled:opacity-50 disabled:cursor-not-allowed"
         >
           -
         </button>

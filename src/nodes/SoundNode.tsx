@@ -1,9 +1,11 @@
 import { useEdges, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { SoundNode as SoundNodeType } from './types';
+import { useTrigger } from '../hooks/useTrigger';
 
 export function SoundNode({ id, selected }: NodeProps<SoundNodeType>) {
   const edges = useEdges();
+  const { isTriggered: triggered } = useTrigger(id);
 
   const inputErrorFn = (index: number) => {
     const hasConnection = edges.some(
@@ -25,6 +27,7 @@ export function SoundNode({ id, selected }: NodeProps<SoundNodeType>) {
       inputs={1}
       outputs={1}
       selected={selected}
+      triggered={triggered}
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
     />

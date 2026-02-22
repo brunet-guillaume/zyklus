@@ -1,10 +1,12 @@
 import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { LpfNode as LpfNodeType } from './types';
+import { useTrigger } from '../hooks/useTrigger';
 
 export function LpfNode({ id, data, selected }: NodeProps<LpfNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
+  const { isTriggered: triggered } = useTrigger(id);
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -25,6 +27,7 @@ export function LpfNode({ id, data, selected }: NodeProps<LpfNodeType>) {
       inputs={1}
       outputs={1}
       selected={selected}
+      triggered={triggered}
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
     >

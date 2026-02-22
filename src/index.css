@@ -143,12 +143,30 @@ body {
 
 /* Generic node styles using --node-color */
 .node {
-  @apply py-0.5 px-3 rounded border bg-(--bg-secondary);
-  @apply border-(--node-color)/70 text-(--node-color)/70;
+  @apply py-0.5 px-3 rounded-lg backdrop-blur-sm bg-black/5;
+  @apply text-(--node-color)/70;
+  outline: 1px solid color-mix(in srgb, var(--node-color) 70%, transparent);
 }
 
 .node.selected {
-  @apply border-(--node-color) text-(--node-color);
+  @apply text-(--node-color);
+  outline-color: var(--node-color);
+}
+
+.node {
+  transition:
+    box-shadow 0.3s ease-out,
+    transform 0.3s ease-out,
+    outline 0.3s ease-out,
+    background 0.3s ease-out;
+}
+
+.node.triggered {
+  @apply text-(--node-color);
+  outline: 2px solid var(--node-color);
+  background: color-mix(in srgb, var(--node-color) 6%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--node-color) 40%, transparent);
+  transition: all 0.05s ease-out;
 }
 
 .node .title {
@@ -160,7 +178,7 @@ body {
 }
 
 .node .content input {
-  @apply outline-none bg-(--background) rounded px-2 py-1 border-b text-xs;
+  @apply outline-none bg-black/30 rounded px-2 py-1 border-b text-xs;
 }
 
 /* Hide number input arrows */
@@ -195,4 +213,9 @@ input[type='number'] {
 
 .auto-width-input input {
   @apply outline-none w-full;
+}
+
+/* Highlight overlay - positioned absolutely, not part of grid */
+.auto-width-input > div {
+  z-index: 10;
 }

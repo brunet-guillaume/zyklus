@@ -2,10 +2,11 @@ import { Handle, Position } from '@xyflow/react';
 
 interface BaseNodeProps {
   type: string;
-  label: string;
+  label?: string;
   inputs?: number;
   outputs?: number;
   selected?: boolean;
+  triggered?: boolean;
   children?: React.ReactNode;
   inputErrorFn?: (index: number) => boolean;
   outputErrorFn?: (index: number) => boolean;
@@ -18,19 +19,23 @@ export function BaseNode({
   inputs = 0,
   outputs = 0,
   selected = false,
+  triggered = false,
   children,
   inputErrorFn,
   outputErrorFn,
   inputLabels,
 }: BaseNodeProps) {
   const handleSpacing = 20;
+  const titleOffset = label ? 20 : 4;
 
   const maxHandles = Math.max(inputs, outputs);
   const hasLabels = inputLabels && inputLabels.length > 0;
 
   return (
-    <div className={`node ${type} ${selected ? 'selected' : ''}`}>
-      <div className="title">{label}</div>
+    <div
+      className={`node ${type} ${selected ? 'selected' : ''} ${triggered ? 'triggered' : ''}`}
+    >
+      {label && <div className="title">{label}</div>}
 
       {/* Handles area with labels */}
       {(maxHandles > 1 || hasLabels) && (
@@ -58,7 +63,7 @@ export function BaseNode({
         const top =
           inputs === 1 && !hasLabels
             ? '50%'
-            : 20 + handleSpacing / 2 + i * handleSpacing;
+            : titleOffset + handleSpacing / 2 + i * handleSpacing;
         return (
           <Handle
             key={`in-${i}`}
@@ -75,7 +80,9 @@ export function BaseNode({
       {Array.from({ length: outputs }).map((_, i) => {
         const hasError = outputErrorFn?.(i) ?? false;
         const top =
-          outputs === 1 ? '50%' : 20 + handleSpacing / 2 + i * handleSpacing;
+          outputs === 1
+            ? '50%'
+            : titleOffset + handleSpacing / 2 + i * handleSpacing;
         return (
           <Handle
             key={`out-${i}`}

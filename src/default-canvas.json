@@ -1,0 +1,243 @@
+{
+  "nodes": [
+    {
+      "id": "0",
+      "type": "value",
+      "position": {
+        "x": -260,
+        "y": -20
+      },
+      "data": {
+        "value": "{d4 bb3 eb3 d3 bb2 eb2}%16"
+      },
+      "measured": {
+        "width": 259,
+        "height": 66
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "1",
+      "type": "note",
+      "position": {
+        "x": 400,
+        "y": 100
+      },
+      "data": {},
+      "measured": {
+        "width": 53,
+        "height": 22
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "2",
+      "type": "fast",
+      "position": {
+        "x": 500,
+        "y": 100
+      },
+      "data": {
+        "value": 1.1
+      },
+      "measured": {
+        "width": 122,
+        "height": 66
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "3",
+      "type": "output",
+      "position": {
+        "x": 660,
+        "y": 100
+      },
+      "data": {
+        "isPlaying": true
+      },
+      "measured": {
+        "width": 150,
+        "height": 59
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "5",
+      "type": "value",
+      "position": {
+        "x": -260,
+        "y": 60
+      },
+      "data": {
+        "value": "{c4 bb3 f3 c3 bb2 f2}%16"
+      },
+      "measured": {
+        "width": 231,
+        "height": 66
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "6",
+      "type": "value",
+      "position": {
+        "x": -260,
+        "y": 140
+      },
+      "data": {
+        "value": "{d4 bb3 g3 d3 bb2 g2}%16"
+      },
+      "measured": {
+        "width": 241,
+        "height": 66
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "7",
+      "type": "value",
+      "position": {
+        "x": -260,
+        "y": 220
+      },
+      "data": {
+        "value": "{c4 bb3 f3 c3 bb2 f2}%16"
+      },
+      "measured": {
+        "width": 231,
+        "height": 66
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "8",
+      "type": "array",
+      "position": {
+        "x": 120,
+        "y": -20
+      },
+      "data": {
+        "inputCount": 4
+      },
+      "measured": {
+        "width": 90,
+        "height": 143
+      }
+    },
+    {
+      "id": "9",
+      "type": "pick",
+      "position": {
+        "x": 260,
+        "y": 100
+      },
+      "data": {
+        "values": "c3, e3, g3, c4",
+        "indices": "<0 1 2 3>"
+      },
+      "measured": {
+        "width": 90,
+        "height": 62
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "10",
+      "type": "value",
+      "position": {
+        "x": 80,
+        "y": 160
+      },
+      "data": {
+        "value": "<0 1 2 3>"
+      },
+      "measured": {
+        "width": 122,
+        "height": 66
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1-2",
+      "source": "1",
+      "sourceHandle": "out-0",
+      "target": "2",
+      "targetHandle": "in-0"
+    },
+    {
+      "id": "e2-3",
+      "source": "2",
+      "sourceHandle": "out-0",
+      "target": "3",
+      "targetHandle": "in-0"
+    },
+    {
+      "type": "gradient",
+      "source": "0",
+      "sourceHandle": "out-0",
+      "target": "8",
+      "targetHandle": "in-0",
+      "id": "xy-edge__0out-0-8in-0"
+    },
+    {
+      "type": "gradient",
+      "source": "5",
+      "sourceHandle": "out-0",
+      "target": "8",
+      "targetHandle": "in-1",
+      "id": "xy-edge__5out-0-8in-1"
+    },
+    {
+      "type": "gradient",
+      "source": "6",
+      "sourceHandle": "out-0",
+      "target": "8",
+      "targetHandle": "in-2",
+      "id": "xy-edge__6out-0-8in-2"
+    },
+    {
+      "type": "gradient",
+      "source": "7",
+      "sourceHandle": "out-0",
+      "target": "8",
+      "targetHandle": "in-3",
+      "id": "xy-edge__7out-0-8in-3"
+    },
+    {
+      "type": "gradient",
+      "source": "8",
+      "sourceHandle": "out-0",
+      "target": "9",
+      "targetHandle": "in-0",
+      "id": "xy-edge__8out-0-9in-0"
+    },
+    {
+      "type": "gradient",
+      "source": "9",
+      "sourceHandle": "out-0",
+      "target": "1",
+      "targetHandle": "in-0",
+      "id": "xy-edge__9out-0-1in-0"
+    },
+    {
+      "type": "gradient",
+      "source": "10",
+      "sourceHandle": "out-0",
+      "target": "9",
+      "targetHandle": "in-1",
+      "id": "xy-edge__10out-0-9in-1"
+    }
+  ]
+}
