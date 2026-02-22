@@ -1,20 +1,32 @@
 import type { Node } from '@xyflow/react';
 
-export type PatternNodeData = {
-  pattern: string;
+export type SoundNodeData = Record<string, never>;
+
+export type NoteNodeData = Record<string, never>;
+
+export type FastNodeData = {
+  value: number;
 };
 
-export type NoteNodeData = {
-  notes: string;
+export type SlowNodeData = {
+  value: number;
 };
 
-export type TransformNodeData = {
-  transform: 'fast' | 'slow' | 'rev';
-  value?: number;
+export type RevNodeData = Record<string, never>;
+
+export type GainNodeData = {
+  value: number;
 };
 
-export type EffectNodeData = {
-  effect: 'room' | 'delay' | 'gain' | 'lpf';
+export type ReverbNodeData = {
+  value: number;
+};
+
+export type DelayNodeData = {
+  value: number;
+};
+
+export type LpfNodeData = {
   value: number;
 };
 
@@ -35,21 +47,37 @@ export type ArrayNodeData = {
   inputCount: number; // number of input handles
 };
 
-export type PatternNode = Node<PatternNodeData, 'pattern'>;
+export type CodeNodeData = {
+  code: string; // raw Strudel code
+};
+
+export type SoundNode = Node<SoundNodeData, 'sound'>;
 export type NoteNode = Node<NoteNodeData, 'note'>;
-export type TransformNode = Node<TransformNodeData, 'transform'>;
-export type EffectNode = Node<EffectNodeData, 'effect'>;
+export type FastNode = Node<FastNodeData, 'fast'>;
+export type SlowNode = Node<SlowNodeData, 'slow'>;
+export type RevNode = Node<RevNodeData, 'rev'>;
+export type GainNode = Node<GainNodeData, 'gain'>;
+export type ReverbNode = Node<ReverbNodeData, 'reverb'>;
+export type DelayNode = Node<DelayNodeData, 'delay'>;
+export type LpfNode = Node<LpfNodeData, 'lpf'>;
 export type OutputNode = Node<OutputNodeData, 'output'>;
 export type PickNode = Node<PickNodeData, 'pick'>;
 export type ValueNode = Node<ValueNodeData, 'value'>;
 export type ArrayNode = Node<ArrayNodeData, 'array'>;
+export type CodeNode = Node<CodeNodeData, 'code'>;
 
 export type AppNode =
-  | PatternNode
+  | SoundNode
   | NoteNode
-  | TransformNode
-  | EffectNode
+  | FastNode
+  | SlowNode
+  | RevNode
+  | GainNode
+  | ReverbNode
+  | DelayNode
+  | LpfNode
   | OutputNode
   | PickNode
   | ValueNode
-  | ArrayNode;
+  | ArrayNode
+  | CodeNode;

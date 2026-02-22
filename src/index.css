@@ -1,4 +1,26 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+:root {
+  --background: #1e2031;
+  --bg-secondary: #23273c;
+  --foreground: #eeeeee;
+
+  /* Node colors */
+  --sound: #ffa577;
+  --note: #71d7ca;
+  --code: #34d399;
+  --value: #fbbf24;
+  --array: #818cf8;
+  --pick: #22d3ee;
+  --fast: #60a5fa;
+  --slow: #a78bfa;
+  --rev: #f472b6;
+  --gain: #4ade80;
+  --reverb: #22c55e;
+  --delay: #16a34a;
+  --lpf: #15803d;
+  --output: #fb923c;
+}
 
 html,
 body,
@@ -9,9 +31,12 @@ body,
 }
 
 body {
-  background-color: #1a1a2e;
-  color: #eee;
-  font-family: system-ui, -apple-system, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 /* Remove default React Flow node styles */
@@ -50,4 +75,124 @@ body {
 
 .react-flow__attribution a {
   color: #9ca3af !important;
+}
+
+.react-flow__handle {
+  @apply h-2! w-2! border! border-(--bg-secondary)!;
+}
+
+.react-flow__handle::before {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  @apply bg-(--node-color)/70!;
+}
+
+.selected .react-flow__handle::before {
+  @apply bg-(--node-color)!;
+}
+
+/* Node type color assignments */
+.sound {
+  --node-color: var(--sound);
+}
+.note {
+  --node-color: var(--note);
+}
+.code {
+  --node-color: var(--code);
+}
+.value {
+  --node-color: var(--value);
+}
+.array {
+  --node-color: var(--array);
+}
+.pick {
+  --node-color: var(--pick);
+}
+.fast {
+  --node-color: var(--fast);
+}
+.slow {
+  --node-color: var(--slow);
+}
+.rev {
+  --node-color: var(--rev);
+}
+.gain {
+  --node-color: var(--gain);
+}
+.reverb {
+  --node-color: var(--reverb);
+}
+.delay {
+  --node-color: var(--delay);
+}
+.lpf {
+  --node-color: var(--lpf);
+}
+.output {
+  --node-color: var(--output);
+}
+
+/* Generic node styles using --node-color */
+.node {
+  @apply py-0.5 px-3 rounded border bg-(--bg-secondary);
+  @apply border-(--node-color)/70 text-(--node-color)/70;
+}
+
+.node.selected {
+  @apply border-(--node-color) text-(--node-color);
+}
+
+.node .title {
+  @apply text-xs! text-center w-full;
+}
+
+.node .content {
+  @apply pb-2 pt-1;
+}
+
+.node .content input {
+  @apply outline-none bg-(--background) rounded px-2 py-1 border-b text-xs;
+}
+
+/* Hide number input arrows */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Handle error state */
+.react-flow__handle.error::before {
+  @apply bg-red-500!;
+}
+
+/* Auto-width input */
+.auto-width-input {
+  @apply relative inline-grid w-min min-w-24;
+}
+
+.auto-width-input span,
+.auto-width-input input {
+  @apply col-start-1 row-start-1 bg-(--background) rounded px-2 py-1;
+}
+
+.auto-width-input span {
+  @apply invisible whitespace-pre;
+}
+
+.auto-width-input input {
+  @apply outline-none w-full;
 }

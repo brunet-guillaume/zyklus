@@ -1,72 +1,33 @@
-import {
-  getAudioContext,
-  webaudioOutput,
-  samples,
-  registerSynthSounds,
-} from '@strudel/webaudio';
-import { repl, type Pattern } from '@strudel/core';
+import { initStrudel, evaluate } from '@strudel/web';
 
-let currentRepl: Awaited<ReturnType<typeof repl>> | null = null;
-let audioInitialized = false;
+let strudelInitialized = false;
 
 export async function initAudio() {
-  if (audioInitialized) return;
+  if (strudelInitialized) return;
 
-  // Get or create audio context
-  const ctx = getAudioContext();
-  if (ctx.state === 'suspended') {
-    await ctx.resume();
-  }
+  // Initialize Strudel with samples
+  await initStrudel();
 
-  // Register synth oscillators (sawtooth, sine, square, triangle)
-  registerSynthSounds();
+  // Load samples
+  await evaluate(`await samples('github:tidalcycles/Dirt-Samples/master')`);
 
-  // Load base samples (drums, etc.)
-  await samples('github:tidalcycles/Dirt-Samples/master');
-
-  audioInitialized = true;
+  strudelInitialized = true;
 }
 
-export async function playPattern(pattern: Pattern) {
+// Play Strudel code
+export async function playCode(code: string): Promise<void> {
   await initAudio();
+  // Add .play() to make the pattern play
+  await evaluate(`(${code}).play()`);
+}
 
-  const ctx = getAudioContext();
-
-  // Resume audio context (required after user interaction)
-  if (ctx.state === 'suspended') {
-    await ctx.resume();
-  }
-
-  if (!currentRepl) {
-    currentRepl = await repl({
-      defaultOutput: webaudioOutput,
-      getTime: () => ctx.currentTime,
-    });
-  }
-
-  try {
-    currentRepl.scheduler.setPattern(pattern, true);
-    if (!currentRepl.scheduler.started) {
-      currentRepl.scheduler.start();
-    }
-  } catch (error) {
-    console.error('Strudel error:', error);
-    throw error;
+// Stop playback using hush()
+export async function stopPlayback(): Promise<void> {
+  if (strudelInitialized) {
+    await evaluate('hush()');
   }
 }
 
-export function updatePattern(pattern: Pattern) {
-  if (currentRepl && currentRepl.scheduler.started) {
-    currentRepl.scheduler.setPattern(pattern, false);
-  }
-}
-
-export function stopPattern() {
-  if (currentRepl) {
-    currentRepl.scheduler.stop();
-  }
-}
-
-export function isPlaying(): boolean {
-  return currentRepl?.scheduler?.started ?? false;
+export function isInitialized(): boolean {
+  return strudelInitialized;
 }

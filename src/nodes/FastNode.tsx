@@ -1,29 +1,28 @@
-import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
-import type { ValueNode as ValueNodeType } from './types';
+import { useReactFlow, useEdges, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
+import type { FastNode as FastNodeType } from './types';
 
-export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
+export function FastNode({ id, data, selected }: NodeProps<FastNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
 
   const inputErrorFn = (index: number) => {
-    const hasConnection = edges.some(
+    return !edges.some(
       (e) => e.target === id && e.targetHandle === `in-${index}`
     );
-    return !hasConnection;
   };
+
   const outputErrorFn = (index: number) => {
-    const hasConnection = edges.some(
+    return !edges.some(
       (e) => e.source === id && e.sourceHandle === `out-${index}`
     );
-    return !hasConnection;
   };
 
   return (
     <BaseNode
-      type="value"
-      label="Value"
-      inputs={0}
+      type="fast"
+      label="Fast"
+      inputs={1}
       outputs={1}
       selected={selected}
       inputErrorFn={inputErrorFn}
@@ -32,10 +31,13 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
       <div className="auto-width-input">
         <span>{data.value || ' '}</span>
         <input
-          type="text"
-          value={data.value}
-          onChange={(e) => updateNodeData(id, { value: e.target.value })}
-          placeholder="Value"
+          type="number"
+          value={data.value ?? 2}
+          onChange={(e) =>
+            updateNodeData(id, { value: parseFloat(e.target.value) || 2 })
+          }
+          step="0.5"
+          min="0.1"
         />
       </div>
     </BaseNode>

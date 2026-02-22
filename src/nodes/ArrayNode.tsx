@@ -1,8 +1,10 @@
-import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react';
+import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
+import { BaseNode } from './BaseNode';
 import type { ArrayNode as ArrayNodeType } from './types';
 
 export function ArrayNode({ id, data, selected }: NodeProps<ArrayNodeType>) {
   const { updateNodeData } = useReactFlow();
+  const edges = useEdges();
   const inputCount = data.inputCount || 2;
 
   const addInput = () => {
@@ -15,63 +17,47 @@ export function ArrayNode({ id, data, selected }: NodeProps<ArrayNodeType>) {
     }
   };
 
-  // Calculate positions: title (16px + 8px margin) + padding (12px) = 36px start
-  // Each row: 20px height + 4px gap = 24px per row, center offset = 10px
-  const getHandleTop = (index: number) => 36 + index * 24 + 10;
+  const inputErrorFn = (index: number) => {
+    return !edges.some(
+      (e) => e.target === id && e.targetHandle === `in-${index}`
+    );
+  };
+
+  const outputErrorFn = (index: number) => {
+    return !edges.some(
+      (e) => e.source === id && e.sourceHandle === `out-${index}`
+    );
+  };
+
+  const inputLabels = Array.from({ length: inputCount }, (_, i) => `[${i}]`);
 
   return (
-    <div
-      className={`relative px-4 py-3 rounded-lg bg-indigo-900 border-2 ${
-        selected ? 'border-indigo-400' : 'border-indigo-700'
-      }`}
+    <BaseNode
+      type="array"
+      label="Array"
+      inputs={inputCount}
+      outputs={1}
+      selected={selected}
+      inputErrorFn={inputErrorFn}
+      outputErrorFn={outputErrorFn}
+      inputLabels={inputLabels}
     >
-      {/* Input handles - positioned absolutely to align with labels */}
-      {Array.from({ length: inputCount }).map((_, i) => (
-        <Handle
-          key={i}
-          type="target"
-          position={Position.Left}
-          id={`input-${i}`}
-          className="w-3 h-3 bg-indigo-400"
-          style={{ top: getHandleTop(i) }}
-        />
-      ))}
-
-      {/* Output handle */}
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="w-3 h-3 bg-indigo-400"
-        style={{ top: '50%' }}
-      />
-
-      <div className="text-xs text-indigo-300 mb-2">Array</div>
-
-      {/* Input labels */}
-      <div className="flex flex-col gap-1 min-w-[60px]">
-        {Array.from({ length: inputCount }).map((_, i) => (
-          <div key={i} className="h-5 flex items-center">
-            <span className="text-xs text-indigo-400 ml-1">[{i}]</span>
-          </div>
-        ))}
-      </div>
-
       {/* Add/Remove buttons */}
-      <div className="flex gap-1 mt-2">
+      <div className="grid grid-cols-2 gap-1 mt-2">
         <button
           onClick={addInput}
-          className="px-2 py-0.5 text-xs bg-indigo-700 hover:bg-indigo-600 rounded"
+          className="px-2 py-0.5 w-full text-xs bg-(--background) hover:opacity-80 rounded border-b"
         >
           +
         </button>
         <button
           onClick={removeInput}
           disabled={inputCount <= 2}
-          className="px-2 py-0.5 text-xs bg-indigo-700 hover:bg-indigo-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 py-0.5 w-full text-xs bg-(--background) hover:opacity-80 rounded border-b disabled:opacity-50 disabled:cursor-not-allowed"
         >
           -
         </button>
       </div>
-    </div>
+    </BaseNode>
   );
 }
