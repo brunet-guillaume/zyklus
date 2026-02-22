@@ -50,6 +50,10 @@ const NODE_CATEGORIES = [
     label: 'Output',
     nodes: [{ type: 'output', label: 'Output' }],
   },
+  {
+    label: 'Layout',
+    nodes: [{ type: 'group', label: 'Group' }],
+  },
 ];
 
 // Estimated menu dimensions for initial positioning

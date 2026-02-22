@@ -13,6 +13,7 @@ import { PickNode } from './PickNode';
 import { ValueNode } from './ValueNode';
 import { ArrayNode } from './ArrayNode';
 import { CodeNode } from './CodeNode';
+import { GroupNode } from './GroupNode';
 
 export const nodeTypes: NodeTypes = {
   sound: SoundNode,
@@ -29,6 +30,7 @@ export const nodeTypes: NodeTypes = {
   value: ValueNode,
   array: ArrayNode,
   code: CodeNode,
+  group: GroupNode,
 };
 
 export * from './types';

@@ -15,6 +15,7 @@ const NODE_OPTIONS = [
   { type: 'delay', label: 'Delay' },
   { type: 'lpf', label: 'Low-pass' },
   { type: 'output', label: 'Output' },
+  { type: 'group', label: 'Group' },
 ];
 
 interface NodePaletteProps {

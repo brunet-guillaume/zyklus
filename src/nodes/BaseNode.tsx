@@ -11,6 +11,11 @@ interface BaseNodeProps {
   inputErrorFn?: (index: number) => boolean;
   outputErrorFn?: (index: number) => boolean;
   inputLabels?: string[];
+  inputHandleTypes?: string[];
+  outputHandleTypes?: string[];
+  borderGradientTypes?: string[]; // Types for radial gradient border
+  compactHandlesArea?: boolean; // Use min-height instead of fixed height for handles area
+  isGroup?: boolean; // Keep group styling even when type changes
 }
 
 export function BaseNode({
@@ -24,6 +29,11 @@ export function BaseNode({
   inputErrorFn,
   outputErrorFn,
   inputLabels,
+  inputHandleTypes,
+  outputHandleTypes,
+  borderGradientTypes,
+  compactHandlesArea = false,
+  isGroup = false,
 }: BaseNodeProps) {
   const handleSpacing = 20;
   const titleOffset = label ? 20 : 4;
@@ -31,9 +41,24 @@ export function BaseNode({
   const maxHandles = Math.max(inputs, outputs);
   const hasLabels = inputLabels && inputLabels.length > 0;
 
+  // Generate radial gradient from border types
+  const borderGradient =
+    borderGradientTypes && borderGradientTypes.length > 0
+      ? `conic-gradient(from 0deg, ${borderGradientTypes
+          .map(
+            (t, i) => `var(--${t}) ${(i / borderGradientTypes.length) * 100}%`
+          )
+          .join(', ')}, var(--${borderGradientTypes[0]}) 100%)`
+      : undefined;
+
   return (
     <div
-      className={`node ${type} ${selected ? 'selected' : ''} ${triggered ? 'triggered' : ''}`}
+      className={`node ${type} ${isGroup ? 'group' : ''} ${selected ? 'selected' : ''} ${triggered ? 'triggered' : ''}`}
+      style={
+        {
+          '--border-gradient': borderGradient,
+        } as React.CSSProperties
+      }
     >
       {label && <div className="title">{label}</div>}
 
@@ -41,7 +66,9 @@ export function BaseNode({
       {(maxHandles > 1 || hasLabels) && (
         <div
           className="relative min-w-16"
-          style={{ minHeight: maxHandles * handleSpacing }}
+          style={
+            compactHandlesArea ? {} : { minHeight: maxHandles * handleSpacing }
+          }
         >
           {inputLabels?.map((lbl, i) => (
             <span
@@ -60,6 +87,7 @@ export function BaseNode({
       {/* Input handles */}
       {Array.from({ length: inputs }).map((_, i) => {
         const hasError = inputErrorFn?.(i) ?? false;
+        const handleType = inputHandleTypes?.[i];
         const top =
           inputs === 1 && !hasLabels
             ? '50%'
@@ -71,7 +99,12 @@ export function BaseNode({
             position={Position.Left}
             id={`in-${i}`}
             className={hasError ? 'error' : ''}
-            style={{ top }}
+            style={
+              {
+                top,
+                '--node-color': handleType ? `var(--${handleType})` : undefined,
+              } as React.CSSProperties
+            }
           />
         );
       })}
@@ -79,6 +112,7 @@ export function BaseNode({
       {/* Output handles */}
       {Array.from({ length: outputs }).map((_, i) => {
         const hasError = outputErrorFn?.(i) ?? false;
+        const handleType = outputHandleTypes?.[i];
         const top =
           outputs === 1
             ? '50%'
@@ -90,7 +124,12 @@ export function BaseNode({
             position={Position.Right}
             id={`out-${i}`}
             className={hasError ? 'error' : ''}
-            style={{ top }}
+            style={
+              {
+                top,
+                '--node-color': handleType ? `var(--${handleType})` : undefined,
+              } as React.CSSProperties
+            }
           />
         );
       })}

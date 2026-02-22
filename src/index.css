@@ -20,6 +20,7 @@
   --delay: #16a34a;
   --lpf: #15803d;
   --output: #fb923c;
+  --group: #64748b;
 }
 
 html,
@@ -140,6 +141,17 @@ body {
 .output {
   --node-color: var(--output);
 }
+.node.group {
+  border-radius: 1rem !important;
+}
+
+.node.group:not(.sound):not(.note):not(.fast):not(.slow):not(.rev):not(
+    .gain
+  ):not(.reverb):not(.delay):not(.lpf):not(.output):not(.pick):not(.value):not(
+    .array
+  ):not(.code) {
+  --node-color: var(--group);
+}
 
 /* Generic node styles using --node-color */
 .node {
@@ -218,4 +230,24 @@ input[type='number'] {
 /* Highlight overlay - positioned absolutely, not part of grid */
 .auto-width-input > div {
   z-index: 10;
+}
+
+/* Group node expanded container */
+.group-container {
+  @apply rounded-lg;
+  background: color-mix(in srgb, var(--group) 8%, transparent);
+  border: 1px dashed var(--group);
+  min-width: 150px;
+  min-height: 80px;
+}
+
+.group-header {
+  @apply flex items-center gap-2 px-2 py-1 rounded-t-lg;
+  background: color-mix(in srgb, var(--group) 20%, transparent);
+  color: var(--group);
+}
+
+.react-flow__node-group.selected .group-container {
+  border-style: solid;
+  border-width: 2px;
 }
