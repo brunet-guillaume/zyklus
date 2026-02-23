@@ -2,11 +2,13 @@ import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { GainNode as GainNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
+import { useEvents } from '../hooks/useEvents';
 
 export function GainNode({ id, data, selected }: NodeProps<GainNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
   const { isTriggered: triggered } = useTrigger(id);
+  const events = useEvents();
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -23,6 +25,8 @@ export function GainNode({ id, data, selected }: NodeProps<GainNodeType>) {
   return (
     <BaseNode
       type="gain"
+      nodeId={id}
+      events={events}
       label="Gain"
       inputs={1}
       outputs={1}

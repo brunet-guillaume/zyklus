@@ -2,10 +2,12 @@ import { useEdges, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { RevNode as RevNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
+import { useEvents } from '../hooks/useEvents';
 
 export function RevNode({ id, selected }: NodeProps<RevNodeType>) {
   const edges = useEdges();
   const { isTriggered: triggered } = useTrigger(id);
+  const events = useEvents();
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -22,6 +24,8 @@ export function RevNode({ id, selected }: NodeProps<RevNodeType>) {
   return (
     <BaseNode
       type="rev"
+      nodeId={id}
+      events={events}
       label="Rev"
       inputs={1}
       outputs={1}

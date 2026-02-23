@@ -2,11 +2,13 @@ import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { ArrayNode as ArrayNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
+import { useEvents } from '../hooks/useEvents';
 
 export function ArrayNode({ id, data, selected }: NodeProps<ArrayNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
   const { isTriggered: triggered } = useTrigger(id);
+  const events = useEvents();
   const inputCount = data.inputCount || 2;
 
   const addInput = () => {
@@ -36,6 +38,8 @@ export function ArrayNode({ id, data, selected }: NodeProps<ArrayNodeType>) {
   return (
     <BaseNode
       type="array"
+      nodeId={id}
+      events={events}
       inputs={inputCount}
       outputs={1}
       selected={selected}

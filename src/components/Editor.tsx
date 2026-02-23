@@ -15,7 +15,13 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes, type AppNode } from '../nodes';
-import { compileGraph, initAudio, playCode, stopPlayback } from '../audio';
+import {
+  compileGraph,
+  initAudio,
+  playCode,
+  queryEvents,
+  stopPlayback,
+} from '../audio';
 import { ContextMenu } from './ContextMenu';
 import { NodePalette } from './NodePalette';
 import { GradientEdge } from './GradientEdge';
@@ -89,7 +95,6 @@ function EditorContent() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [compiledCode, setCompiledCode] = useState('');
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -277,24 +282,28 @@ function EditorContent() {
   );
 
   const handleCompile = useCallback(async () => {
-    const code = compileGraph(nodes, edges);
-    setCompiledCode(code);
+    const result = compileGraph(nodes, edges);
 
-    // Hot reload: if playing, update the pattern
-    if (isPlaying && code) {
-      await playCode(code);
+    // Always query events to show squares
+    if (result.cleanCode) {
+      await queryEvents(result.cleanCode);
     }
 
-    return code;
+    // Hot reload: if playing, update the pattern
+    if (isPlaying && result.code) {
+      await playCode(result.code);
+    }
+
+    return result;
   }, [nodes, edges, isPlaying]);
 
   const handlePlay = useCallback(async () => {
     setIsLoading(true);
     try {
       await initAudio();
-      const code = await handleCompile();
-      if (code) {
-        await playCode(code);
+      const result = await handleCompile();
+      if (result.code) {
+        await playCode(result.code);
         setIsPlaying(true);
         setNodes((nds) =>
           nds.map((n) =>
@@ -670,11 +679,6 @@ function EditorContent() {
             Reset
           </button>
         </div>
-        {compiledCode && (
-          <code className="ml-4 px-3 py-1 bg-gray-800 rounded text-sm text-green-400">
-            {compiledCode}
-          </code>
-        )}
       </div>
 
       {/* Flow Editor */}

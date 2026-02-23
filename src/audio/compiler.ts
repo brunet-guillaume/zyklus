@@ -1,8 +1,15 @@
 import type { Edge } from '@xyflow/react';
 import type { AppNode } from '../nodes/types';
 
-// Types for tracking data nodes
-type BuildResult = { code: string; dataNodeIds: string[] };
+// Node info for trigger chain
+type NodeInfo = { id: string; type: string };
+
+// Build result includes the chain of data nodes
+type BuildResult = {
+  code: string;
+  sourceType: string;
+  dataNodes: NodeInfo[]; // Value/array nodes that feed into this
+};
 
 // Mapping of nodeId to position range in compiled code
 export type ValuePositionMap = Map<
@@ -17,29 +24,45 @@ export function getValuePositions(): ValuePositionMap {
   return currentValuePositions;
 }
 
+export interface CompileResult {
+  code: string;
+  cleanCode: string; // Code without onTrigger callbacks, for querying
+  eventCount: number; // Number of events per cycle (0 if unknown)
+}
+
 /**
  * Compile the node graph into Strudel code string
  * Also builds a position map for Value nodes
+ * Returns both the full code (with triggers) and clean code (for querying)
  */
-export function compileGraph(nodes: AppNode[], edges: Edge[]): string {
+export function compileGraph(nodes: AppNode[], edges: Edge[]): CompileResult {
   const outputNodes = nodes.filter((n) => n.type === 'output');
-  if (outputNodes.length === 0) return '';
+  if (outputNodes.length === 0)
+    return { code: '', cleanCode: '', eventCount: 0 };
 
-  // Build code for each output
+  // Build code for each output (with triggers)
   const codes = outputNodes
-    .map((outputNode) => buildCode(outputNode.id, nodes, edges).code)
+    .map((outputNode) => buildCode(outputNode.id, nodes, edges, true).code)
     .filter((code) => code !== '');
 
-  if (codes.length === 0) return '';
+  // Build clean code for each output (without triggers, for querying)
+  const cleanCodes = outputNodes
+    .map((outputNode) => buildCode(outputNode.id, nodes, edges, false).code)
+    .filter((code) => code !== '');
+
+  if (codes.length === 0) return { code: '', cleanCode: '', eventCount: 0 };
 
   // Combine multiple outputs with stack
   let code = codes.length === 1 ? codes[0] : `stack(${codes.join(', ')})`;
+  let cleanCode =
+    cleanCodes.length === 1 ? cleanCodes[0] : `stack(${cleanCodes.join(', ')})`;
 
   // Extract value positions from markers and clean the code
   currentValuePositions = extractValuePositions(code);
   code = removeMarkers(code);
+  cleanCode = removeMarkers(cleanCode);
 
-  return code;
+  return { code, cleanCode, eventCount: 0 };
 }
 
 // Marker format: ␂nodeId␃content␄
@@ -100,188 +123,296 @@ function removeMarkers(code: string): string {
 }
 
 /**
- * Create trigger string that fires for node and its data dependencies
- * Passes the hap to get location info for highlighting
+ * Create trigger string that fires for this node AND all data nodes in the chain
  */
-function makeTrigger(nodeId: string, dataNodeIds: string[]): string {
-  const allIds = [nodeId, ...dataNodeIds];
-  const triggers = allIds
-    .map((id) => `__zyklusTrigger('${id}', hap)`)
-    .join('; ');
-  return `.onTrigger((hap) => { ${triggers} }, false)`;
+function makeTrigger(
+  nodeId: string,
+  nodeType: string,
+  dataNodes: NodeInfo[],
+  includeTriggers: boolean
+): string {
+  if (!includeTriggers) return '';
+
+  // Build array of all triggers
+  const allTriggers = [
+    `__zyklusTrigger('${nodeId}', hap, '${nodeType}')`,
+    ...dataNodes.map((n) => `__zyklusTrigger('${n.id}', hap, '${n.type}')`),
+  ];
+
+  return `.onTrigger((hap) => { ${allTriggers.join('; ')} }, false)`;
 }
 
 /**
  * Build code string for a node
- * Returns code and any data node IDs (value/array) that feed into it
  */
 function buildCode(
   nodeId: string,
   nodes: AppNode[],
-  edges: Edge[]
+  edges: Edge[],
+  includeTriggers: boolean = true
 ): BuildResult {
   const node = nodes.find((n) => n.id === nodeId);
-  if (!node) return { code: '', dataNodeIds: [] };
+  if (!node) return { code: '', sourceType: '', dataNodes: [] };
 
   // Find incoming edges and get source codes
   const incomingEdges = edges.filter((e) => e.target === nodeId);
   const sourceResults = incomingEdges
     .map((edge) => {
       const sourceNode = nodes.find((n) => n.id === edge.source);
-      if (!sourceNode) return { edge, result: { code: '', dataNodeIds: [] } };
+      if (!sourceNode)
+        return { edge, result: { code: '', sourceType: '', dataNodes: [] } };
       return {
         edge,
-        result: buildCode(sourceNode.id, nodes, edges),
+        result: buildCode(sourceNode.id, nodes, edges, includeTriggers),
       };
     })
     .filter((s) => s.result.code !== '');
 
-  // Collect all data node IDs from sources
-  const allDataNodeIds = sourceResults.flatMap((s) => s.result.dataNodeIds);
+  // Collect all data nodes from sources
+  const allDataNodes = sourceResults.flatMap((s) => s.result.dataNodes);
+
+  // Get source type from first source (propagate through chain)
+  const inheritedSourceType = sourceResults[0]?.result.sourceType || '';
 
   switch (node.type) {
-    // === DATA NODES (return their ID to be triggered by consumers) ===
+    // === DATA NODES (pass themselves in dataNodes) ===
 
     case 'value':
-      // Wrap content with markers for position tracking
       return {
         code: `"${MARKER_START}${node.id}${MARKER_SEP}${node.data.value}${MARKER_END}"`,
-        dataNodeIds: [node.id],
+        sourceType: 'value',
+        dataNodes: [{ id: node.id, type: 'value' }],
       };
 
     case 'array': {
-      // Sort by input handle index
       const sorted = sourceResults.sort((a, b) => {
         const aIdx = parseInt(a.edge.targetHandle?.split('-')[1] || '0');
         const bIdx = parseInt(b.edge.targetHandle?.split('-')[1] || '0');
         return aIdx - bIdx;
       });
+      // Add trigger to each element for its dataNodes + array itself
+      const elements = sorted.map((s) => {
+        // Always include array in the trigger, plus any source dataNodes
+        const triggerNodes = [
+          ...s.result.dataNodes,
+          { id: node.id, type: 'array' },
+        ];
+        const trigger = makeTrigger(
+          node.id,
+          'array',
+          triggerNodes,
+          includeTriggers
+        );
+        return `${s.result.code}${trigger}`;
+      });
       return {
-        code: `[${sorted.map((s) => s.result.code).join(', ')}]`,
-        dataNodeIds: [node.id, ...allDataNodeIds],
+        code: `[${elements.join(', ')}]`,
+        sourceType: 'array',
+        dataNodes: [],
       };
     }
 
-    // === SOURCE NODES ===
+    // === SOURCE NODES (fire triggers for self + data nodes) ===
 
     case 'sound': {
-      const trigger = makeTrigger(node.id, allDataNodeIds);
+      const trigger = makeTrigger(
+        node.id,
+        'sound',
+        allDataNodes,
+        includeTriggers
+      );
       const code =
         sourceResults.length > 0
           ? `${sourceResults[0].result.code}.s()${trigger}`
           : `"${node.data.sound}".s()${trigger}`;
-      return { code, dataNodeIds: [] };
+      return { code, sourceType: 'sound', dataNodes: [] };
     }
 
     case 'code': {
-      const trigger = makeTrigger(node.id, allDataNodeIds);
-      return { code: `(${node.data.code})${trigger}`, dataNodeIds: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'code',
+        allDataNodes,
+        includeTriggers
+      );
+      return {
+        code: `(${node.data.code})${trigger}`,
+        sourceType: 'code',
+        dataNodes: [],
+      };
     }
 
     // === PATTERN GENERATORS ===
 
     case 'note': {
-      const trigger = makeTrigger(node.id, allDataNodeIds);
+      const trigger = makeTrigger(
+        node.id,
+        'note',
+        allDataNodes,
+        includeTriggers
+      );
       const code =
         sourceResults.length > 0
           ? `note(${sourceResults[0].result.code})${trigger}`
           : `note("${node.data.note}")${trigger}`;
-      return { code, dataNodeIds: [] };
+      return { code, sourceType: 'note', dataNodes: [] };
     }
 
     case 'pick': {
-      // in-0: array/values, in-1: indices pattern
       const valuesInput = sourceResults.find(
         (s) => s.edge.targetHandle === 'in-0'
       );
       const indicesInput = sourceResults.find(
         (s) => s.edge.targetHandle === 'in-1'
       );
-      if (!valuesInput || !indicesInput) return { code: '', dataNodeIds: [] };
-      const trigger = makeTrigger(node.id, allDataNodeIds);
+      if (!valuesInput || !indicesInput)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'pick',
+        allDataNodes,
+        includeTriggers
+      );
       return {
         code: `pick(${valuesInput.result.code}, ${indicesInput.result.code})${trigger}`,
-        dataNodeIds: [],
+        sourceType: 'pick',
+        dataNodes: [],
       };
     }
 
     // === TRANSFORM NODES ===
 
     case 'fast': {
-      if (sourceResults.length === 0) return { code: '', dataNodeIds: [] };
-      const trigger = makeTrigger(node.id, allDataNodeIds);
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'fast',
+        allDataNodes,
+        includeTriggers
+      );
       return {
         code: `${sourceResults[0].result.code}.fast(${node.data.value})${trigger}`,
-        dataNodeIds: [],
+        sourceType: inheritedSourceType,
+        dataNodes: [],
       };
     }
 
     case 'slow': {
-      if (sourceResults.length === 0) return { code: '', dataNodeIds: [] };
-      const trigger = makeTrigger(node.id, allDataNodeIds);
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'slow',
+        allDataNodes,
+        includeTriggers
+      );
       return {
         code: `${sourceResults[0].result.code}.slow(${node.data.value})${trigger}`,
-        dataNodeIds: [],
+        sourceType: inheritedSourceType,
+        dataNodes: [],
       };
     }
 
     case 'rev': {
-      if (sourceResults.length === 0) return { code: '', dataNodeIds: [] };
-      const trigger = makeTrigger(node.id, allDataNodeIds);
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'rev',
+        allDataNodes,
+        includeTriggers
+      );
       return {
         code: `${sourceResults[0].result.code}.rev()${trigger}`,
-        dataNodeIds: [],
+        sourceType: inheritedSourceType,
+        dataNodes: [],
       };
     }
 
     case 'gain': {
-      if (sourceResults.length === 0) return { code: '', dataNodeIds: [] };
-      const trigger = makeTrigger(node.id, allDataNodeIds);
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'gain',
+        allDataNodes,
+        includeTriggers
+      );
       return {
         code: `${sourceResults[0].result.code}.gain(${node.data.value})${trigger}`,
-        dataNodeIds: [],
+        sourceType: inheritedSourceType,
+        dataNodes: [],
       };
     }
 
     case 'reverb': {
-      if (sourceResults.length === 0) return { code: '', dataNodeIds: [] };
-      const trigger = makeTrigger(node.id, allDataNodeIds);
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'reverb',
+        allDataNodes,
+        includeTriggers
+      );
       return {
         code: `${sourceResults[0].result.code}.room(${node.data.value})${trigger}`,
-        dataNodeIds: [],
+        sourceType: inheritedSourceType,
+        dataNodes: [],
       };
     }
 
     case 'delay': {
-      if (sourceResults.length === 0) return { code: '', dataNodeIds: [] };
-      const trigger = makeTrigger(node.id, allDataNodeIds);
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'delay',
+        allDataNodes,
+        includeTriggers
+      );
       return {
         code: `${sourceResults[0].result.code}.delay(${node.data.value})${trigger}`,
-        dataNodeIds: [],
+        sourceType: inheritedSourceType,
+        dataNodes: [],
       };
     }
 
     case 'lpf': {
-      if (sourceResults.length === 0) return { code: '', dataNodeIds: [] };
-      const trigger = makeTrigger(node.id, allDataNodeIds);
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'lpf',
+        allDataNodes,
+        includeTriggers
+      );
       return {
         code: `${sourceResults[0].result.code}.lpf(${node.data.value})${trigger}`,
-        dataNodeIds: [],
+        sourceType: inheritedSourceType,
+        dataNodes: [],
       };
     }
 
     // === OUTPUT NODE ===
 
     case 'output': {
-      if (sourceResults.length === 0) return { code: '', dataNodeIds: [] };
-      const trigger = makeTrigger(node.id, allDataNodeIds);
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'output',
+        allDataNodes,
+        includeTriggers
+      );
       return {
         code: `${sourceResults[0].result.code}${trigger}`,
-        dataNodeIds: [],
+        sourceType: inheritedSourceType,
+        dataNodes: [],
       };
     }
 
     default:
-      return { code: '', dataNodeIds: [] };
+      return { code: '', sourceType: '', dataNodes: [] };
   }
 }

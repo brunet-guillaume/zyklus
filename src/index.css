@@ -79,14 +79,14 @@ body {
 }
 
 .react-flow__handle {
-  @apply h-2! w-2! border! border-(--bg-secondary)!;
+  @apply h-3! w-3! border! border-(--bg-secondary)!;
 }
 
 .react-flow__handle::before {
   content: '';
   position: absolute;
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   top: 50%;
   left: 50%;
@@ -162,7 +162,7 @@ body {
 
 .node.selected {
   @apply text-(--node-color);
-  outline-color: var(--node-color);
+  outline: 2px solid var(--node-color);
 }
 
 .node {
@@ -175,7 +175,7 @@ body {
 
 .node.triggered {
   @apply text-(--node-color);
-  outline: 2px solid var(--node-color);
+  outline-color: var(--node-color);
   background: color-mix(in srgb, var(--node-color) 6%, transparent);
   box-shadow: 0 0 12px color-mix(in srgb, var(--node-color) 40%, transparent);
   transition: all 0.05s ease-out;

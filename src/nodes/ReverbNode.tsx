@@ -2,11 +2,13 @@ import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { ReverbNode as ReverbNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
+import { useEvents } from '../hooks/useEvents';
 
 export function ReverbNode({ id, data, selected }: NodeProps<ReverbNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
   const { isTriggered: triggered } = useTrigger(id);
+  const events = useEvents();
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -23,6 +25,8 @@ export function ReverbNode({ id, data, selected }: NodeProps<ReverbNodeType>) {
   return (
     <BaseNode
       type="reverb"
+      nodeId={id}
+      events={events}
       label="Reverb"
       inputs={1}
       outputs={1}

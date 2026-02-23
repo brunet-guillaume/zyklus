@@ -1,61 +1,42 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-
-export interface TriggerLocation {
-  start: number;
-  end: number;
-}
+import { useState, useEffect, useRef } from 'react';
 
 export interface TriggerState {
   isTriggered: boolean;
-  locations?: TriggerLocation[];
   triggeredType?: string;
-  triggeredChildId?: string;
+  note?: string | number | null;
+  timing?: { start: number; end: number };
 }
 
 export function useTrigger(nodeId: string): TriggerState {
   const [state, setState] = useState<TriggerState>({ isTriggered: false });
   const timeoutRef = useRef<number | null>(null);
 
-  const trigger = useCallback(
-    (
-      locations?: TriggerLocation[],
-      triggeredType?: string,
-      triggeredChildId?: string
-    ) => {
-      // Clear previous timeout
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      setState({
-        isTriggered: true,
-        locations,
-        triggeredType,
-        triggeredChildId,
-      });
-
-      // Reset after animation duration
-      timeoutRef.current = window.setTimeout(() => {
-        setState({ isTriggered: false });
-      }, 150);
-    },
-    []
-  );
-
   useEffect(() => {
     const handleTrigger = (event: Event) => {
       const customEvent = event as CustomEvent<{
         nodeId: string;
-        locations?: TriggerLocation[];
-        triggeredType?: string;
-        triggeredChildId?: string;
+        nodeType?: string;
+        note?: string | number | null;
+        timing?: { start: number; end: number };
       }>;
+
       if (customEvent.detail?.nodeId === nodeId) {
-        trigger(
-          customEvent.detail.locations,
-          customEvent.detail.triggeredType,
-          customEvent.detail.triggeredChildId
-        );
+        // Clear previous timeout
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+
+        setState({
+          isTriggered: true,
+          triggeredType: customEvent.detail.nodeType,
+          note: customEvent.detail.note,
+          timing: customEvent.detail.timing,
+        });
+
+        // Reset after animation duration
+        timeoutRef.current = window.setTimeout(() => {
+          setState({ isTriggered: false });
+        }, 150);
       }
     };
 
@@ -66,7 +47,7 @@ export function useTrigger(nodeId: string): TriggerState {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [trigger, nodeId]);
+  }, [nodeId]);
 
   return state;
 }

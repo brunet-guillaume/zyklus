@@ -6,14 +6,22 @@ import {
 } from '@xyflow/react';
 import type { GroupNode as GroupNodeType } from './types';
 import { BaseNode } from './BaseNode';
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useRef } from 'react';
+
+interface SquareState {
+  id: string;
+  nodeId: string;
+  nodeType: string;
+  isTriggered: boolean;
+  start: number;
+  end: number;
+}
 
 export function GroupNode({ id, data, selected }: NodeProps<GroupNodeType>) {
   const { updateNodeData } = useReactFlow();
   const nodes = useNodes();
   const edges = useEdges();
 
-  // Find child nodes of this group
   const childNodes = useMemo(() => {
     return nodes.filter((n) => n.parentId === id);
   }, [nodes, id]);
@@ -22,91 +30,176 @@ export function GroupNode({ id, data, selected }: NodeProps<GroupNodeType>) {
     return new Set(childNodes.map((n) => n.id));
   }, [childNodes]);
 
-  // Track triggered children for badge animation
-  const [triggeredChildren, setTriggeredChildren] = useState<Set<string>>(
-    new Set()
-  );
-  // Track the type of the currently triggered child (for group color)
   const [triggeredType, setTriggeredType] = useState<string | null>(null);
+  const [squares, setSquares] = useState<SquareState[]>([]);
+  const timeoutsRef = useRef<Map<string, number>>(new Map());
 
-  useEffect(() => {
+  // Get internal nodes sorted (nodes without inputs first)
+  const internalNodes = useMemo(() => {
+    if (data.expanded) return [];
     const childIds = data.childIds ?? [];
     const childTypes = data.childTypes ?? [];
-    const outputChildIds = new Set(data.outputChildIds ?? []);
+    if (childIds.length === 0) return [];
 
-    if (childIds.length === 0 || data.expanded) return;
+    const result: Array<{ id: string; type: string; hasInputs: boolean }> = [];
 
-    const timeouts = new Map<string, number>();
+    for (let i = 0; i < childIds.length; i++) {
+      const nodeId = childIds[i];
+      const nodeType = childTypes[i] || 'unknown';
+      const hasInputs = edges.some(
+        (e) => e.target === nodeId && childIds.includes(e.source)
+      );
+      result.push({ id: nodeId, type: nodeType, hasInputs });
+    }
+
+    result.sort((a, b) => {
+      if (a.hasInputs === b.hasInputs) return 0;
+      return a.hasInputs ? 1 : -1;
+    });
+
+    return result;
+  }, [data.expanded, data.childIds, data.childTypes, edges]);
+
+  // Listen for events to create squares
+  useEffect(() => {
+    if (data.expanded || internalNodes.length === 0) return;
+
+    const handleEvents = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        locations: Array<{ start: number; end: number }>;
+      }>;
+
+      const locations = customEvent.detail?.locations ?? [];
+
+      const newSquares: SquareState[] = [];
+      for (const node of internalNodes) {
+        for (let i = 0; i < locations.length; i++) {
+          newSquares.push({
+            id: `${node.id}-${i}`,
+            nodeId: node.id,
+            nodeType: node.type,
+            isTriggered: false,
+            start: locations[i].start,
+            end: locations[i].end,
+          });
+        }
+      }
+      setSquares(newSquares);
+    };
+
+    window.addEventListener('zyklus:events', handleEvents);
+    return () => window.removeEventListener('zyklus:events', handleEvents);
+  }, [data.expanded, internalNodes]);
+
+  // Handle triggers
+  useEffect(() => {
+    if (data.expanded) return;
+    const childIds = data.childIds ?? [];
+    if (childIds.length === 0) return;
+
     let typeTimeout: number | null = null;
 
     const handleTrigger = (event: Event) => {
-      const customEvent = event as CustomEvent<{ nodeId: string }>;
-      const triggeredNodeId = customEvent.detail?.nodeId;
+      const customEvent = event as CustomEvent<{
+        nodeId: string;
+        nodeType: string;
+        timing?: { start: number; end: number };
+      }>;
 
-      if (triggeredNodeId && childIds.includes(triggeredNodeId)) {
-        // Clear existing timeout for this node
-        const existingTimeout = timeouts.get(triggeredNodeId);
-        if (existingTimeout) clearTimeout(existingTimeout);
+      const detail = customEvent.detail;
+      if (!detail?.nodeId) return;
+      if (!childIds.includes(detail.nodeId)) return;
 
-        // Add to triggered set
-        setTriggeredChildren((prev) => new Set(prev).add(triggeredNodeId));
+      // Update border color
+      if (typeTimeout) clearTimeout(typeTimeout);
+      setTriggeredType(detail.nodeType);
+      typeTimeout = window.setTimeout(() => {
+        setTriggeredType(null);
+      }, 150);
 
-        // Set the group color only if this child is connected to output
-        const childIndex = childIds.indexOf(triggeredNodeId);
-        const childType = childTypes[childIndex];
+      const triggerPos = detail.timing ? detail.timing.start % 1 : 0;
 
-        if (outputChildIds.has(triggeredNodeId) && childType) {
-          if (typeTimeout) clearTimeout(typeTimeout);
-          setTriggeredType(childType);
-          typeTimeout = window.setTimeout(() => {
-            setTriggeredType(null);
-          }, 150);
-        }
+      setSquares((prev) => {
+        return prev.map((sq) => {
+          if (sq.nodeId !== detail.nodeId) return sq;
 
-        // Emit trigger for the group itself (for edge animation)
-        // Pass the triggered child ID so edges can look up if they connect to it
-        window.dispatchEvent(
-          new CustomEvent('zyklus:trigger', {
-            detail: {
-              nodeId: id,
-              triggeredType: outputChildIds.has(triggeredNodeId)
-                ? childType
-                : undefined,
-              triggeredChildId: triggeredNodeId,
-            },
-          })
-        );
+          const shouldTrigger =
+            triggerPos >= sq.start - 0.001 && triggerPos < sq.end + 0.001;
 
-        // Remove after animation duration
-        const timeout = window.setTimeout(() => {
-          setTriggeredChildren((prev) => {
-            const next = new Set(prev);
-            next.delete(triggeredNodeId);
-            return next;
-          });
-          timeouts.delete(triggeredNodeId);
-        }, 150);
-        timeouts.set(triggeredNodeId, timeout);
-      }
+          if (shouldTrigger) {
+            const existingTimeout = timeoutsRef.current.get(sq.id);
+            if (existingTimeout) clearTimeout(existingTimeout);
+
+            const timeout = window.setTimeout(() => {
+              setSquares((s) =>
+                s.map((x) =>
+                  x.id === sq.id ? { ...x, isTriggered: false } : x
+                )
+              );
+              timeoutsRef.current.delete(sq.id);
+            }, 150);
+            timeoutsRef.current.set(sq.id, timeout);
+
+            return { ...sq, isTriggered: true };
+          }
+
+          return sq;
+        });
+      });
+
+      // Emit trigger for group (for Output and parent groups)
+      window.dispatchEvent(
+        new CustomEvent('zyklus:trigger', {
+          detail: {
+            nodeId: id,
+            nodeType: 'group',
+            timing: detail.timing,
+          },
+        })
+      );
     };
 
     window.addEventListener('zyklus:trigger', handleTrigger);
+    const timeouts = timeoutsRef.current;
     return () => {
       window.removeEventListener('zyklus:trigger', handleTrigger);
       timeouts.forEach((t) => clearTimeout(t));
+      timeouts.clear();
       if (typeTimeout) clearTimeout(typeTimeout);
     };
-  }, [
-    data.childIds,
-    data.childTypes,
-    data.outputChildIds,
-    data.edgeToChildMap,
-    data.expanded,
-    id,
-  ]);
+  }, [data.expanded, data.childIds, id]);
 
-  // Calculate bounding box of children (for expanded view)
-  // Children are positioned relative to group, handle negative positions
+  // Group squares by node
+  const squaresByNode = useMemo(() => {
+    const groups: Array<{
+      nodeId: string;
+      nodeType: string;
+      squares: SquareState[];
+    }> = [];
+    const nodeMap = new Map<string, SquareState[]>();
+
+    for (const sq of squares) {
+      if (!nodeMap.has(sq.nodeId)) {
+        nodeMap.set(sq.nodeId, []);
+      }
+      nodeMap.get(sq.nodeId)!.push(sq);
+    }
+
+    for (const node of internalNodes) {
+      const nodeSquares = nodeMap.get(node.id);
+      if (nodeSquares && nodeSquares.length > 0) {
+        groups.push({
+          nodeId: node.id,
+          nodeType: node.type,
+          squares: nodeSquares,
+        });
+      }
+    }
+
+    return groups;
+  }, [squares, internalNodes]);
+
+  // Calculate bounding box of children
   const childrenBounds = useMemo(() => {
     if (childNodes.length === 0) {
       return { width: 150, height: 100, offsetX: 0, offsetY: 0 };
@@ -120,7 +213,6 @@ export function GroupNode({ id, data, selected }: NodeProps<GroupNodeType>) {
     for (const child of childNodes) {
       const width = child.measured?.width ?? 120;
       const height = child.measured?.height ?? 50;
-
       minX = Math.min(minX, child.position.x);
       minY = Math.min(minY, child.position.y);
       maxX = Math.max(maxX, child.position.x + width);
@@ -128,7 +220,6 @@ export function GroupNode({ id, data, selected }: NodeProps<GroupNodeType>) {
     }
 
     const padding = 20;
-    // Handle negative positions by extending the container
     const offsetX = Math.min(0, minX - padding);
     const offsetY = Math.min(0, minY - padding);
 
@@ -140,12 +231,10 @@ export function GroupNode({ id, data, selected }: NodeProps<GroupNodeType>) {
     };
   }, [childNodes]);
 
-  // Map child IDs to Y positions for sorting
   const childPositions = useMemo(() => {
     return new Map(childNodes.map((n) => [n.id, n.position.y]));
   }, [childNodes]);
 
-  // Calculate external inputs/outputs (sorted by child Y position)
   const externalInputs = useMemo(() => {
     return edges
       .filter((e) => childNodeIds.has(e.target) && !childNodeIds.has(e.source))
@@ -169,7 +258,6 @@ export function GroupNode({ id, data, selected }: NodeProps<GroupNodeType>) {
   const calculatedInputCount = externalInputs.length;
   const calculatedOutputCount = externalOutputs.length;
 
-  // Store counts when expanded
   useEffect(() => {
     if (
       data.expanded &&
@@ -198,51 +286,25 @@ export function GroupNode({ id, data, selected }: NodeProps<GroupNodeType>) {
     ? calculatedOutputCount
     : (data.outputCount ?? calculatedOutputCount);
 
-  const inputErrorFn = (index: number) => {
-    const count = data.expanded ? calculatedInputCount : (data.inputCount ?? 0);
-    return index >= count;
-  };
-  const outputErrorFn = (index: number) => {
-    const count = data.expanded
-      ? calculatedOutputCount
-      : (data.outputCount ?? 0);
-    return index >= count;
-  };
+  const inputErrorFn = (index: number) =>
+    index >= (data.expanded ? calculatedInputCount : (data.inputCount ?? 0));
+  const outputErrorFn = (index: number) =>
+    index >= (data.expanded ? calculatedOutputCount : (data.outputCount ?? 0));
 
   const toggleExpanded = () => {
     if (data.expanded) {
-      // Store bounds, child types and IDs when collapsing
       const childTypes = childNodes
         .map((n) => n.type)
         .filter((t): t is string => !!t);
       const childIds = childNodes.map((n) => n.id);
-      // Get IDs of children connected to external outputs
       const outputChildIds = [...new Set(externalOutputs.map((e) => e.source))];
-      // Map input handle index to child type and ID (for handle colors and trigger)
-      const inputHandleTypes = externalInputs.map((e) => {
-        const child = childNodes.find((n) => n.id === e.target);
-        return child?.type ?? 'group';
-      });
-      const inputHandleChildIds = externalInputs.map((e) => e.target);
-      // Map output handle index to child type and ID (for edge colors)
-      const outputHandleTypes = externalOutputs.map((e) => {
-        const child = childNodes.find((n) => n.id === e.source);
-        return child?.type ?? 'group';
-      });
-      const outputHandleChildIds = externalOutputs.map((e) => e.source);
-      // Map edge ID to child ID and type (for robust trigger matching)
-      const edgeToChildMap: Record<string, string> = {};
-      const edgeToTypeMap: Record<string, string> = {};
-      for (const e of externalInputs) {
-        edgeToChildMap[e.id] = e.target;
-        const child = childNodes.find((n) => n.id === e.target);
-        edgeToTypeMap[e.id] = child?.type ?? 'group';
-      }
-      for (const e of externalOutputs) {
-        edgeToChildMap[e.id] = e.source;
-        const child = childNodes.find((n) => n.id === e.source);
-        edgeToTypeMap[e.id] = child?.type ?? 'group';
-      }
+      const inputHandleTypes = externalInputs.map(
+        (e) => childNodes.find((n) => n.id === e.target)?.type ?? 'group'
+      );
+      const outputHandleTypes = externalOutputs.map(
+        (e) => childNodes.find((n) => n.id === e.source)?.type ?? 'group'
+      );
+
       updateNodeData(id, {
         expanded: false,
         inputCount: calculatedInputCount,
@@ -255,18 +317,13 @@ export function GroupNode({ id, data, selected }: NodeProps<GroupNodeType>) {
         childIds,
         outputChildIds,
         inputHandleTypes,
-        inputHandleChildIds,
         outputHandleTypes,
-        outputHandleChildIds,
-        edgeToChildMap,
-        edgeToTypeMap,
       });
     } else {
       updateNodeData(id, { expanded: true });
     }
   };
 
-  // Expanded view: large container
   if (data.expanded) {
     return (
       <div
@@ -296,9 +353,8 @@ export function GroupNode({ id, data, selected }: NodeProps<GroupNodeType>) {
     );
   }
 
-  // Calculate center offset for collapsed view
-  const collapsedNodeWidth = 100; // Approximate width of collapsed node
-  const collapsedNodeHeight = 40; // Approximate height of collapsed node
+  const collapsedNodeWidth = 100;
+  const collapsedNodeHeight = 40;
   const centerOffsetX = data.expandedWidth
     ? (data.expandedOffsetX ?? 0) +
       (data.expandedWidth - collapsedNodeWidth) / 2
@@ -308,17 +364,17 @@ export function GroupNode({ id, data, selected }: NodeProps<GroupNodeType>) {
       (data.expandedHeight - collapsedNodeHeight) / 2
     : 0;
 
-  // Collapsed view: normal node centered where the expanded container was
   return (
     <div
       style={{ transform: `translate(${centerOffsetX}px, ${centerOffsetY}px)` }}
     >
       <BaseNode
         type={triggeredType ?? 'group'}
+        nodeId={id}
         inputs={inputCount}
         outputs={outputCount}
         selected={selected}
-        triggered={triggeredChildren.size > 0}
+        triggered={triggeredType !== null}
         inputErrorFn={inputErrorFn}
         outputErrorFn={outputErrorFn}
         inputHandleTypes={data.inputHandleTypes}
@@ -326,36 +382,32 @@ export function GroupNode({ id, data, selected }: NodeProps<GroupNodeType>) {
         compactHandlesArea
         isGroup
       >
-        <div className="flex flex-col gap-1">
-          {data.childTypes && data.childTypes.length > 0 && (
+        <div className="flex flex-col">
+          {squaresByNode.map((group) => (
             <div
-              className="flex gap-2 -mx-3 -mt-1 px-2 pt-1.5 pb-1"
+              key={group.nodeId}
+              className="flex flex-wrap -mx-3 first:-mt-1 px-2"
               style={{ width: 'calc(100% + 24px)' }}
             >
-              {data.childTypes.map((type, i) => {
-                const childId = data.childIds?.[i];
-                const isTriggered = childId
-                  ? triggeredChildren.has(childId)
-                  : false;
+              {group.squares.map((sq) => {
+                const color = `var(--${sq.nodeType})`;
                 return (
                   <span
-                    key={i}
-                    className="flex-1 rounded-lg transition-all duration-150"
+                    key={sq.id}
+                    className="rounded-sm transition-all duration-150"
                     style={{
                       backgroundColor: 'transparent',
-                      border: `${isTriggered ? 2 : 1}px solid var(--${type})`,
-                      opacity: isTriggered ? 1 : 0.4,
-                      boxShadow: isTriggered
-                        ? `0 0 8px var(--${type})`
-                        : 'none',
-                      height: '18px',
+                      border: `${sq.isTriggered ? 2 : 1}px solid ${color}`,
+                      opacity: sq.isTriggered ? 1 : 0.4,
+                      boxShadow: sq.isTriggered ? `0 0 8px ${color}` : 'none',
+                      width: '4px',
+                      height: '4px',
                     }}
-                    title={type}
                   />
                 );
               })}
             </div>
-          )}
+          ))}
           <div className="flex items-center gap-2 text-xs">
             <button
               onClick={toggleExpanded}

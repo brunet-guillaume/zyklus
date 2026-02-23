@@ -2,11 +2,13 @@ import { useReactFlow, useEdges, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { SlowNode as SlowNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
+import { useEvents } from '../hooks/useEvents';
 
 export function SlowNode({ id, data, selected }: NodeProps<SlowNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
   const { isTriggered: triggered } = useTrigger(id);
+  const events = useEvents();
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -23,6 +25,8 @@ export function SlowNode({ id, data, selected }: NodeProps<SlowNodeType>) {
   return (
     <BaseNode
       type="slow"
+      nodeId={id}
+      events={events}
       label="Slow"
       inputs={1}
       outputs={1}

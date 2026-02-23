@@ -2,11 +2,13 @@ import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { DelayNode as DelayNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
+import { useEvents } from '../hooks/useEvents';
 
 export function DelayNode({ id, data, selected }: NodeProps<DelayNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
   const { isTriggered: triggered } = useTrigger(id);
+  const events = useEvents();
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -23,6 +25,8 @@ export function DelayNode({ id, data, selected }: NodeProps<DelayNodeType>) {
   return (
     <BaseNode
       type="delay"
+      nodeId={id}
+      events={events}
       label="Delay"
       inputs={1}
       outputs={1}
