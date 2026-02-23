@@ -15,12 +15,14 @@
   --fast: #60a5fa;
   --slow: #a78bfa;
   --rev: #f472b6;
+  --supersaw: #e879f9;
+  --slider: #f59e0b;
   --gain: #4ade80;
   --reverb: #22c55e;
   --delay: #16a34a;
   --lpf: #15803d;
+  --lpenv: #166534;
   --output: #fb923c;
-  --group: #64748b;
 }
 
 html,
@@ -126,6 +128,12 @@ body {
 .rev {
   --node-color: var(--rev);
 }
+.supersaw {
+  --node-color: var(--supersaw);
+}
+.slider {
+  --node-color: var(--slider);
+}
 .gain {
   --node-color: var(--gain);
 }
@@ -138,24 +146,16 @@ body {
 .lpf {
   --node-color: var(--lpf);
 }
+.lpenv {
+  --node-color: var(--lpenv);
+}
 .output {
   --node-color: var(--output);
-}
-.node.group {
-  border-radius: 1rem !important;
-}
-
-.node.group:not(.sound):not(.note):not(.fast):not(.slow):not(.rev):not(
-    .gain
-  ):not(.reverb):not(.delay):not(.lpf):not(.output):not(.pick):not(.value):not(
-    .array
-  ):not(.code) {
-  --node-color: var(--group);
 }
 
 /* Generic node styles using --node-color */
 .node {
-  @apply py-0.5 px-3 rounded-lg backdrop-blur-sm bg-black/5;
+  @apply rounded-lg backdrop-blur-sm bg-black/5 min-w-20 min-h-5;
   @apply text-(--node-color)/70;
   outline: 1px solid color-mix(in srgb, var(--node-color) 70%, transparent);
 }
@@ -182,11 +182,19 @@ body {
 }
 
 .node .title {
-  @apply text-xs! text-center w-full;
+  @apply text-xs! text-center w-full absolute -top-1 -translate-y-full left-0 opacity-25 transition-opacity;
+}
+
+.node.selected .title {
+  @apply opacity-75;
 }
 
 .node .content {
-  @apply pb-2 pt-1;
+  @apply py-2 px-3;
+}
+
+.node .tools {
+  @apply py-1 px-2 bg-black/30 text-xs;
 }
 
 .node .content input {
@@ -232,22 +240,60 @@ input[type='number'] {
   z-index: 10;
 }
 
-/* Group node expanded container */
-.group-container {
-  @apply rounded-lg;
-  background: color-mix(in srgb, var(--group) 8%, transparent);
-  border: 1px dashed var(--group);
-  min-width: 150px;
-  min-height: 80px;
+/* Slider styling */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 18px;
+  padding: 0;
+  margin: 0;
 }
 
-.group-header {
-  @apply flex items-center gap-2 px-2 py-1 rounded-t-lg;
-  background: color-mix(in srgb, var(--group) 20%, transparent);
-  color: var(--group);
+input[type='range']::-webkit-slider-runnable-track {
+  height: 18px;
+  background: transparent;
+  border-radius: 2px;
+  background-image: linear-gradient(
+    to right,
+    var(--node-color) 0%,
+    var(--node-color) var(--slider-progress, 50%),
+    rgba(0, 0, 0, 0.3) var(--slider-progress, 50%),
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  background-size: 100% 4px;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
-.react-flow__node-group.selected .group-container {
-  border-style: solid;
-  border-width: 2px;
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--node-color);
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+}
+
+input[type='range']::-moz-range-track {
+  height: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+}
+
+input[type='range']::-moz-range-progress {
+  height: 4px;
+  background: var(--node-color);
+  border-radius: 2px;
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--node-color);
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
 }

@@ -73,6 +73,10 @@ function getDefaultData(type: string) {
       return { value: 2 };
     case 'rev':
       return {};
+    case 'supersaw':
+      return {};
+    case 'slider':
+      return { min: 20, max: 2000, value: 1000, step: 10 };
     case 'gain':
       return { value: 0.8 };
     case 'reverb':
@@ -81,10 +85,10 @@ function getDefaultData(type: string) {
       return { value: 0.5 };
     case 'lpf':
       return { value: 1000 };
+    case 'lpenv':
+      return { value: 4 };
     case 'output':
       return { isPlaying: false };
-    case 'group':
-      return { label: 'Group', expanded: false };
     default:
       return {};
   }
@@ -109,66 +113,6 @@ function EditorContent() {
   } | null>(null);
   const flowRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
-
-  // Handle deletion: unparent children when deleting a group
-  const onBeforeDelete = useCallback(
-    async ({
-      nodes: nodesToDelete,
-      edges: edgesToDelete,
-    }: {
-      nodes: AppNode[];
-      edges: Edge[];
-    }) => {
-      const groupsToDelete = nodesToDelete.filter((n) => n.type === 'group');
-
-      if (groupsToDelete.length > 0) {
-        const groupIds = new Set(groupsToDelete.map((g) => g.id));
-        const nonGroupNodesToDelete = new Set(
-          nodesToDelete.filter((n) => n.type !== 'group').map((n) => n.id)
-        );
-        const edgeIdsToDelete = new Set(edgesToDelete.map((e) => e.id));
-
-        // Do everything in one atomic operation
-        setNodes((nds) => {
-          const result: AppNode[] = [];
-          for (const n of nds) {
-            // Remove groups being deleted
-            if (groupIds.has(n.id)) continue;
-            // Remove other nodes being deleted
-            if (nonGroupNodesToDelete.has(n.id)) continue;
-
-            // Unparent children of groups being deleted
-            if (n.parentId && groupIds.has(n.parentId)) {
-              const parent = nds.find((p) => p.id === n.parentId);
-              if (parent) {
-                result.push({
-                  ...n,
-                  parentId: undefined,
-                  position: {
-                    x: n.position.x + parent.position.x,
-                    y: n.position.y + parent.position.y,
-                  },
-                } as AppNode);
-                continue;
-              }
-            }
-
-            result.push(n);
-          }
-          return result;
-        });
-
-        // Also delete the edges
-        setEdges((eds) => eds.filter((e) => !edgeIdsToDelete.has(e.id)));
-
-        // Return false to prevent React Flow's default deletion
-        return false;
-      }
-
-      return true; // Allow normal deletion for non-groups
-    },
-    [setNodes, setEdges]
-  );
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -208,29 +152,6 @@ function EditorContent() {
           flowX: flowPos.x,
           flowY: flowPos.y,
         });
-      }
-
-      // U: ungroup selected nodes
-      if (e.code === 'KeyU') {
-        e.preventDefault();
-        setNodes((nds) =>
-          nds.map((n) => {
-            if (n.selected && n.parentId) {
-              const parent = nds.find((p) => p.id === n.parentId);
-              if (parent) {
-                return {
-                  ...n,
-                  parentId: undefined,
-                  position: {
-                    x: n.position.x + parent.position.x,
-                    y: n.position.y + parent.position.y,
-                  },
-                } as AppNode;
-              }
-            }
-            return n;
-          })
-        );
       }
     };
 
@@ -353,61 +274,8 @@ function EditorContent() {
     (type: string) => {
       if (!contextMenu) return;
 
-      const newNodeId = getNodeId();
-
-      if (type === 'group') {
-        // Get selected nodes (excluding groups)
-        const selectedNodes = nodes.filter(
-          (n) => n.selected && n.type !== 'group'
-        );
-
-        if (selectedNodes.length > 0) {
-          // Calculate bounding box of selected nodes
-          let minX = Infinity,
-            minY = Infinity;
-          for (const n of selectedNodes) {
-            minX = Math.min(minX, n.position.x);
-            minY = Math.min(minY, n.position.y);
-          }
-
-          const padding = 20;
-          const headerHeight = 30;
-          const groupX = minX - padding;
-          const groupY = minY - padding - headerHeight;
-
-          // Create group node first, then update children
-          const groupNode = {
-            id: newNodeId,
-            type: 'group',
-            position: { x: groupX, y: groupY },
-            data: { ...getDefaultData('group'), expanded: true },
-          } as AppNode;
-
-          setNodes((nds) => {
-            // Add group first
-            const withGroup = [groupNode, ...nds];
-            // Then update children to reference the group
-            return withGroup.map((n) => {
-              if (n.selected && n.type !== 'group') {
-                return {
-                  ...n,
-                  parentId: newNodeId,
-                  position: {
-                    x: n.position.x - groupX,
-                    y: n.position.y - groupY,
-                  },
-                  selected: false,
-                } as AppNode;
-              }
-              return n;
-            });
-          });
-          return;
-        }
-      }
-
       const newNode = {
-        id: newNodeId,
+        id: getNodeId(),
         type,
         position: { x: contextMenu.flowX, y: contextMenu.flowY },
         data: getDefaultData(type),
@@ -415,69 +283,15 @@ function EditorContent() {
 
       setNodes((nds) => [...nds, newNode]);
     },
-    [contextMenu, setNodes, nodes]
+    [contextMenu, setNodes]
   );
 
   const handlePaletteSelect = useCallback(
     (type: string) => {
       if (!palette) return;
 
-      const newNodeId = getNodeId();
-
-      if (type === 'group') {
-        // Get selected nodes (excluding groups)
-        const selectedNodes = nodes.filter(
-          (n) => n.selected && n.type !== 'group'
-        );
-
-        if (selectedNodes.length > 0) {
-          // Calculate bounding box of selected nodes
-          let minX = Infinity,
-            minY = Infinity;
-          for (const n of selectedNodes) {
-            minX = Math.min(minX, n.position.x);
-            minY = Math.min(minY, n.position.y);
-          }
-
-          const padding = 20;
-          const headerHeight = 30;
-          const groupX = minX - padding;
-          const groupY = minY - padding - headerHeight;
-
-          // Create group node first, then update children
-          const groupNode = {
-            id: newNodeId,
-            type: 'group',
-            position: { x: groupX, y: groupY },
-            data: { ...getDefaultData('group'), expanded: true },
-          } as AppNode;
-
-          setNodes((nds) => {
-            // Add group first
-            const withGroup = [groupNode, ...nds];
-            // Then update children to reference the group
-            return withGroup.map((n) => {
-              if (n.selected && n.type !== 'group') {
-                return {
-                  ...n,
-                  parentId: newNodeId,
-                  position: {
-                    x: n.position.x - groupX,
-                    y: n.position.y - groupY,
-                  },
-                  selected: false,
-                } as AppNode;
-              }
-              return n;
-            });
-          });
-          setPalette(null);
-          return;
-        }
-      }
-
       const newNode = {
-        id: newNodeId,
+        id: getNodeId(),
         type,
         position: { x: palette.flowX, y: palette.flowY },
         data: getDefaultData(type),
@@ -486,114 +300,8 @@ function EditorContent() {
       setNodes((nds) => [...nds, newNode]);
       setPalette(null);
     },
-    [palette, setNodes, nodes]
+    [palette, setNodes]
   );
-
-  // Find collapsed groups and their children
-  const collapsedGroups = nodes.filter(
-    (n) => n.type === 'group' && !(n.data as { expanded?: boolean }).expanded
-  );
-  const collapsedGroupIds = new Set(collapsedGroups.map((g) => g.id));
-
-  // Map child node IDs to their parent group ID (for collapsed groups only)
-  const childToGroupMap = new Map<string, string>();
-  for (const node of nodes) {
-    if (node.parentId && collapsedGroupIds.has(node.parentId)) {
-      childToGroupMap.set(node.id, node.parentId);
-    }
-  }
-
-  // Set hidden property on nodes that are children of collapsed groups
-  const visibleNodes = nodes.map((node) => {
-    if (!node.parentId) return node;
-    const parent = nodes.find((n) => n.id === node.parentId);
-    if (!parent || parent.type !== 'group') return node;
-    const isHidden = !(parent.data as { expanded?: boolean }).expanded;
-    return { ...node, hidden: isHidden };
-  });
-
-  // Build handle mappings for collapsed groups
-  const groupInputHandles = new Map<string, Map<string, number>>(); // groupId -> (edgeId -> handleIndex)
-  const groupOutputHandles = new Map<string, Map<string, number>>();
-
-  for (const group of collapsedGroups) {
-    const children = nodes.filter((n) => n.parentId === group.id);
-    const childIds = new Set(children.map((n) => n.id));
-    const childPositions = new Map(children.map((n) => [n.id, n.position.y]));
-
-    // External inputs: edges going INTO children from outside (sorted by target Y position)
-    const inputs = edges
-      .filter((e) => childIds.has(e.target) && !childIds.has(e.source))
-      .sort(
-        (a, b) =>
-          (childPositions.get(a.target) ?? 0) -
-          (childPositions.get(b.target) ?? 0)
-      );
-    const inputMap = new Map<string, number>();
-    inputs.forEach((e, i) => inputMap.set(e.id, i));
-    groupInputHandles.set(group.id, inputMap);
-
-    // External outputs: edges going OUT OF children to outside (sorted by source Y position)
-    const outputs = edges
-      .filter((e) => childIds.has(e.source) && !childIds.has(e.target))
-      .sort(
-        (a, b) =>
-          (childPositions.get(a.source) ?? 0) -
-          (childPositions.get(b.source) ?? 0)
-      );
-    const outputMap = new Map<string, number>();
-    outputs.forEach((e, i) => outputMap.set(e.id, i));
-    groupOutputHandles.set(group.id, outputMap);
-  }
-
-  // Compute visible edges: redirect edges to group handles when collapsed
-  const visibleEdges = edges
-    .map((edge) => {
-      const sourceGroup = childToGroupMap.get(edge.source);
-      const targetGroup = childToGroupMap.get(edge.target);
-
-      // Both ends inside same collapsed group - hide edge
-      if (sourceGroup && targetGroup && sourceGroup === targetGroup) {
-        return null;
-      }
-
-      // Source is in collapsed group - redirect to group output
-      if (sourceGroup) {
-        const handleIndex =
-          groupOutputHandles.get(sourceGroup)?.get(edge.id) ?? 0;
-        const sourceHandle = `out-${handleIndex}`;
-        return {
-          ...edge,
-          source: sourceGroup,
-          sourceHandle,
-          data: {
-            ...edge.data,
-            originalSourceChildId: edge.source, // Store original child ID
-            redirectedSourceHandle: sourceHandle,
-          },
-        };
-      }
-
-      // Target is in collapsed group - redirect to group input
-      if (targetGroup) {
-        const handleIndex =
-          groupInputHandles.get(targetGroup)?.get(edge.id) ?? 0;
-        const targetHandle = `in-${handleIndex}`;
-        return {
-          ...edge,
-          target: targetGroup,
-          targetHandle,
-          data: {
-            ...edge.data,
-            originalTargetChildId: edge.target, // Store original child ID
-            redirectedTargetHandle: targetHandle,
-          },
-        };
-      }
-
-      return edge;
-    })
-    .filter((e): e is Edge => e !== null);
 
   const handleSave = useCallback(() => {
     const data = JSON.stringify({ nodes, edges }, null, 2);
@@ -684,10 +392,9 @@ function EditorContent() {
       {/* Flow Editor */}
       <div className="flex-1" ref={flowRef}>
         <ReactFlow
-          nodes={visibleNodes}
-          edges={visibleEdges}
+          nodes={nodes}
+          edges={edges}
           onNodesChange={onNodesChange}
-          onBeforeDelete={onBeforeDelete}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onContextMenu={handleContextMenu}
@@ -695,8 +402,6 @@ function EditorContent() {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           defaultEdgeOptions={{ type: 'gradient' }}
-          snapToGrid
-          snapGrid={[20, 20]}
           fitView
         >
           <Background color="#424A72" gap={20} />

@@ -10,6 +10,11 @@ export function SlowNode({ id, data, selected }: NodeProps<SlowNodeType>) {
   const { isTriggered: triggered } = useTrigger(id);
   const events = useEvents();
 
+  const value = data.value ?? 2;
+  const min = data.min ?? 0.1;
+  const max = data.max ?? 16;
+  const step = data.step ?? 0.5;
+
   const inputErrorFn = (index: number) => {
     return !edges.some(
       (e) => e.target === id && e.targetHandle === `in-${index}`
@@ -34,17 +39,21 @@ export function SlowNode({ id, data, selected }: NodeProps<SlowNodeType>) {
       triggered={triggered}
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
-    >
-      <input
-        type="number"
-        value={data.value ?? 2}
-        onChange={(e) =>
-          updateNodeData(id, { value: parseFloat(e.target.value) || 2 })
-        }
-        className="w-16 bg-transparent border-b border-current/50 px-1 py-0.5 text-sm font-mono text-center focus:outline-none focus:border-current"
-        step="0.5"
-        min="0.1"
-      />
-    </BaseNode>
+      className="w-46"
+      slider={{
+        value,
+        min,
+        max,
+        step,
+        onChange: (v) => updateNodeData(id, { value: v }),
+        onMinChange: (v) => updateNodeData(id, { min: v }),
+        onMaxChange: (v) => updateNodeData(id, { max: v }),
+        onStepChange: (v) => updateNodeData(id, { step: v }),
+      }}
+      isSliderMode={data.isSlider ?? false}
+      onSliderModeChange={(isSlider) => updateNodeData(id, { isSlider })}
+      expanded={data.expanded ?? false}
+      onExpandedChange={(expanded) => updateNodeData(id, { expanded })}
+    />
   );
 }

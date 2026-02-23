@@ -1,19 +1,19 @@
 import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
-import type { LpfNode as LpfNodeType } from './types';
+import type { LpEnvNode as LpEnvNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
 import { useEvents } from '../hooks/useEvents';
 
-export function LpfNode({ id, data, selected }: NodeProps<LpfNodeType>) {
+export function LpEnvNode({ id, data, selected }: NodeProps<LpEnvNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
   const { isTriggered: triggered } = useTrigger(id);
   const events = useEvents();
 
-  const value = data.value ?? 1000;
-  const min = data.min ?? 20;
-  const max = data.max ?? 20000;
-  const step = data.step ?? 100;
+  const value = data.value ?? 4;
+  const min = data.min ?? 0;
+  const max = data.max ?? 16;
+  const step = data.step ?? 0.1;
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -29,10 +29,10 @@ export function LpfNode({ id, data, selected }: NodeProps<LpfNodeType>) {
 
   return (
     <BaseNode
-      type="lpf"
+      type="lpenv"
       nodeId={id}
       events={events}
-      label="Low-pass"
+      label="LP Env"
       inputs={1}
       outputs={1}
       selected={selected}

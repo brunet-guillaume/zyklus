@@ -24,6 +24,8 @@ export function NoteNode({ id, selected }: NodeProps<NoteNodeType>) {
   return (
     <BaseNode
       type="note"
+      modeOutput
+      className="w-20"
       nodeId={id}
       events={events}
       label="Note"

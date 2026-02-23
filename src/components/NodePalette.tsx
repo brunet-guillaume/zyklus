@@ -10,12 +10,14 @@ const NODE_OPTIONS = [
   { type: 'fast', label: 'Fast' },
   { type: 'slow', label: 'Slow' },
   { type: 'rev', label: 'Rev' },
+  { type: 'supersaw', label: 'Supersaw' },
+  { type: 'slider', label: 'Slider' },
   { type: 'gain', label: 'Gain' },
   { type: 'reverb', label: 'Reverb' },
   { type: 'delay', label: 'Delay' },
   { type: 'lpf', label: 'Low-pass' },
+  { type: 'lpenv', label: 'LP Env' },
   { type: 'output', label: 'Output' },
-  { type: 'group', label: 'Group' },
 ];
 
 interface NodePaletteProps {

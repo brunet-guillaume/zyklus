@@ -12,6 +12,7 @@ const NODE_CATEGORIES = [
     label: 'Sources',
     nodes: [
       { type: 'value', label: 'Value' },
+      { type: 'slider', label: 'Slider' },
       { type: 'code', label: 'Code' },
     ],
   },
@@ -20,6 +21,7 @@ const NODE_CATEGORIES = [
     nodes: [
       { type: 'sound', label: 'Sound' },
       { type: 'note', label: 'Note' },
+      { type: 'supersaw', label: 'Supersaw' },
     ],
   },
   {
@@ -44,15 +46,12 @@ const NODE_CATEGORIES = [
       { type: 'reverb', label: 'Reverb' },
       { type: 'delay', label: 'Delay' },
       { type: 'lpf', label: 'Low-pass' },
+      { type: 'lpenv', label: 'LP Env' },
     ],
   },
   {
     label: 'Output',
     nodes: [{ type: 'output', label: 'Output' }],
-  },
-  {
-    label: 'Layout',
-    nodes: [{ type: 'group', label: 'Group' }],
   },
 ];
 

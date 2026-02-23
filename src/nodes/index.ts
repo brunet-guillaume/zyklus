@@ -4,16 +4,18 @@ import { NoteNode } from './NoteNode';
 import { FastNode } from './FastNode';
 import { SlowNode } from './SlowNode';
 import { RevNode } from './RevNode';
+import { SupersawNode } from './SupersawNode';
+import { SliderNode } from './SliderNode';
 import { GainNode } from './GainNode';
 import { ReverbNode } from './ReverbNode';
 import { DelayNode } from './DelayNode';
 import { LpfNode } from './LpfNode';
+import { LpEnvNode } from './LpEnvNode';
 import { OutputNode } from './OutputNode';
 import { PickNode } from './PickNode';
 import { ValueNode } from './ValueNode';
 import { ArrayNode } from './ArrayNode';
 import { CodeNode } from './CodeNode';
-import { GroupNode } from './GroupNode';
 
 export const nodeTypes: NodeTypes = {
   sound: SoundNode,
@@ -21,16 +23,18 @@ export const nodeTypes: NodeTypes = {
   fast: FastNode,
   slow: SlowNode,
   rev: RevNode,
+  supersaw: SupersawNode,
+  slider: SliderNode,
   gain: GainNode,
   reverb: ReverbNode,
   delay: DelayNode,
   lpf: LpfNode,
+  lpenv: LpEnvNode,
   output: OutputNode,
   pick: PickNode,
   value: ValueNode,
   array: ArrayNode,
   code: CodeNode,
-  group: GroupNode,
 };
 
 export * from './types';

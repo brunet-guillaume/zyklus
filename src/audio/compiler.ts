@@ -184,6 +184,16 @@ function buildCode(
         dataNodes: [{ id: node.id, type: 'value' }],
       };
 
+    case 'slider': {
+      // Use a global variable that can be updated in real-time
+      // Strudel will read this value on each cycle via signal()
+      return {
+        code: `signal(() => window.__zyklusSliders?.['${node.id}'] ?? ${node.data.value ?? 500})`,
+        sourceType: 'slider',
+        dataNodes: [{ id: node.id, type: 'slider' }],
+      };
+    }
+
     case 'array': {
       const sorted = sourceResults.sort((a, b) => {
         const aIdx = parseInt(a.edge.targetHandle?.split('-')[1] || '0');
@@ -307,8 +317,12 @@ function buildCode(
         allDataNodes,
         includeTriggers
       );
+      const isSliderMode = window.__zyklusSliderModes?.[node.id] ?? false;
+      const slowValue = isSliderMode
+        ? `signal(() => window.__zyklusSliders?.['${node.id}'] ?? ${node.data.value ?? 2})`
+        : (node.data.value ?? 2);
       return {
-        code: `${sourceResults[0].result.code}.slow(${node.data.value})${trigger}`,
+        code: `${sourceResults[0].result.code}.slow(${slowValue})${trigger}`,
         sourceType: inheritedSourceType,
         dataNodes: [],
       };
@@ -325,6 +339,22 @@ function buildCode(
       );
       return {
         code: `${sourceResults[0].result.code}.rev()${trigger}`,
+        sourceType: inheritedSourceType,
+        dataNodes: [],
+      };
+    }
+
+    case 'supersaw': {
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'supersaw',
+        allDataNodes,
+        includeTriggers
+      );
+      return {
+        code: `${sourceResults[0].result.code}.sound("supersaw")${trigger}`,
         sourceType: inheritedSourceType,
         dataNodes: [],
       };
@@ -387,8 +417,34 @@ function buildCode(
         allDataNodes,
         includeTriggers
       );
+      // Use signal for real-time control only if slider mode is enabled
+      const isSliderMode = window.__zyklusSliderModes?.[node.id] ?? false;
+      const freqValue = isSliderMode
+        ? `signal(() => window.__zyklusSliders?.['${node.id}'] ?? ${node.data.value ?? 1000})`
+        : (node.data.value ?? 1000);
       return {
-        code: `${sourceResults[0].result.code}.lpf(${node.data.value})${trigger}`,
+        code: `${sourceResults[0].result.code}.lpf(${freqValue})${trigger}`,
+        sourceType: inheritedSourceType,
+        dataNodes: [],
+      };
+    }
+
+    case 'lpenv': {
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'lpenv',
+        allDataNodes,
+        includeTriggers
+      );
+      // Use signal for real-time control only if slider mode is enabled
+      const isSliderMode = window.__zyklusSliderModes?.[node.id] ?? false;
+      const envValue = isSliderMode
+        ? `signal(() => window.__zyklusSliders?.['${node.id}'] ?? ${node.data.value ?? 4})`
+        : (node.data.value ?? 4);
+      return {
+        code: `${sourceResults[0].result.code}.lpenv(${envValue})${trigger}`,
         sourceType: inheritedSourceType,
         dataNodes: [],
       };
