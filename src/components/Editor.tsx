@@ -25,6 +25,7 @@ import {
 import { ContextMenu } from './ContextMenu';
 import { NodePalette } from './NodePalette';
 import { GradientEdge } from './GradientEdge';
+import { DebugCodeView } from './DebugCodeView';
 import defaultCanvas from '../default-canvas.json';
 
 const edgeTypes = {
@@ -442,6 +443,8 @@ function EditorContent() {
           onClose={() => setPalette(null)}
         />
       )}
+
+      <DebugCodeView />
     </div>
   );
 }

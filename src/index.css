@@ -31,6 +31,7 @@
   --pcurve: #06b6d4;
   --pdecay: #0891b2;
   --output: #fb923c;
+  --cpm: #f97316;
 }
 
 html,
@@ -182,6 +183,9 @@ body {
 .output {
   --node-color: var(--output);
 }
+.cpm {
+  --node-color: var(--cpm);
+}
 
 /* Generic node styles using --node-color */
 .node {
@@ -227,7 +231,8 @@ body {
   @apply py-1 px-2 bg-black/30 text-xs;
 }
 
-.node .content input {
+.node .content input,
+.node .content .input {
   @apply outline-none bg-black/30 rounded px-2 py-1 border-b text-xs;
 }
 
@@ -252,22 +257,45 @@ input[type='number'] {
   @apply relative inline-grid w-min min-w-24;
 }
 
-.auto-width-input span,
-.auto-width-input input {
+.auto-width-input > span,
+.auto-width-input > input {
   @apply col-start-1 row-start-1 bg-(--background) rounded px-2 py-1;
 }
 
-.auto-width-input span {
+.auto-width-input > span {
   @apply invisible whitespace-pre;
 }
 
-.auto-width-input input {
+.auto-width-input > input {
   @apply outline-none w-full;
 }
 
-/* Highlight overlay - positioned absolutely, not part of grid */
-.auto-width-input > div {
-  z-index: 10;
+.auto-width-input > .editable {
+  @apply col-start-1 row-start-1 bg-(--background) rounded px-2 py-1 outline-none w-full;
+}
+
+.auto-width-input > .editable mark {
+  @apply px-1 -mx-1 py-0.5 rounded-sm;
+  animation: highlight-fade var(--duration, 1000ms) ease-out forwards;
+}
+
+@keyframes highlight-fade {
+  0% {
+    background-color: transparent;
+    color: inherit;
+  }
+  15% {
+    background-color: var(--node-color);
+    color: black;
+  }
+  50% {
+    background-color: var(--node-color);
+    color: black;
+  }
+  100% {
+    background-color: transparent;
+    color: inherit;
+  }
 }
 
 /* Slider styling */

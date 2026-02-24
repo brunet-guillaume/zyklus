@@ -1,5 +1,6 @@
 import type { Edge } from '@xyflow/react';
 import type { AppNode } from '../nodes/types';
+import { getNodeDefinition } from '../nodes/nodeDefinitions';
 
 // Node info for trigger chain
 type NodeInfo = { id: string; type: string };
@@ -11,23 +12,56 @@ type BuildResult = {
   dataNodes: NodeInfo[]; // Value/array nodes that feed into this
 };
 
-// Mapping of nodeId to position range in compiled code
-export type ValuePositionMap = Map<
-  string,
-  { start: number; end: number; content: string }
->;
+// Map of nodeId to start position in compiled code (after the opening quote)
+export type ValueStartMap = Map<string, number>;
 
-// Store the current position map globally for access by trigger handler
-let currentValuePositions: ValuePositionMap = new Map();
-
-export function getValuePositions(): ValuePositionMap {
-  return currentValuePositions;
+// Expose globals
+declare global {
+  interface Window {
+    __zyklusCpm?: number;
+    __zyklusValueStarts?: ValueStartMap;
+    __zyklusCompiledCode?: string;
+  }
 }
 
 export interface CompileResult {
   code: string;
   cleanCode: string; // Code without onTrigger callbacks, for querying
   eventCount: number; // Number of events per cycle (0 if unknown)
+}
+
+/**
+ * Build global statements from standalone nodes (CPM, etc.)
+ */
+function buildGlobalStatements(nodes: AppNode[]): string[] {
+  const statements: string[] = [];
+
+  for (const node of nodes) {
+    const def = getNodeDefinition(node.type);
+    if (def?.compile.type === 'global') {
+      const { method } = def.compile;
+      const defaultValue = def.slider?.value ?? 1;
+
+      // Global functions (like setCpm) don't support signal() - always use static value
+      const isSliderMode = def.slider
+        ? (window.__zyklusSliderModes?.[node.id] ??
+          def.slider.defaultMode === 'slider')
+        : false;
+
+      const currentValue = isSliderMode
+        ? (window.__zyklusSliders?.[node.id] ?? defaultValue)
+        : ((node.data as { value?: number }).value ?? defaultValue);
+
+      statements.push(`${method}(${currentValue})`);
+
+      // Store CPM globally for animation duration calculations
+      if (node.type === 'cpm') {
+        window.__zyklusCpm = currentValue;
+      }
+    }
+  }
+
+  return statements;
 }
 
 /**
@@ -39,6 +73,9 @@ export function compileGraph(nodes: AppNode[], edges: Edge[]): CompileResult {
   const outputNodes = nodes.filter((n) => n.type === 'output');
   if (outputNodes.length === 0)
     return { code: '', cleanCode: '', eventCount: 0 };
+
+  // Build global statements (CPM, etc.) - always use static values
+  const globalStatements = buildGlobalStatements(nodes);
 
   // Build code for each output (with triggers)
   const codes = outputNodes
@@ -53,125 +90,114 @@ export function compileGraph(nodes: AppNode[], edges: Edge[]): CompileResult {
   if (codes.length === 0) return { code: '', cleanCode: '', eventCount: 0 };
 
   // Combine multiple outputs with stack
-  let code = codes.length === 1 ? codes[0] : `stack(${codes.join(', ')})`;
-  let cleanCode =
+  const patternCode =
+    codes.length === 1 ? codes[0] : `stack(${codes.join(', ')})`;
+  const cleanPatternCode =
     cleanCodes.length === 1 ? cleanCodes[0] : `stack(${cleanCodes.join(', ')})`;
 
-  // Extract value positions from markers and clean the code
-  currentValuePositions = extractValuePositions(code);
-  code = removeMarkers(code);
-  cleanCode = removeMarkers(cleanCode);
+  // Combine global statements with pattern code using comma operator
+  // This allows the code to be wrapped in parentheses: (setCpm(60), pattern).play()
+  let code = [...globalStatements, patternCode].join(', ');
+  let cleanCode = [...globalStatements, cleanPatternCode].join(', ');
+
+  // Extract ValueNode positions from markers and remove them
+  console.log('[Compiler] Code with markers:', code);
+  const valueStarts = extractValueStarts(code);
+  console.log('[Compiler] ValueStarts:', Object.fromEntries(valueStarts));
+  code = removeValueMarkers(code);
+  cleanCode = removeValueMarkers(cleanCode);
+  console.log('[Compiler] Code without markers:', code);
+
+  window.__zyklusValueStarts = valueStarts;
 
   return { code, cleanCode, eventCount: 0 };
 }
 
-// Marker format: ␂nodeId␃content␄
-const MARKER_START = '\u0002'; // STX
-const MARKER_SEP = '\u0003'; // ETX
-const MARKER_END = '\u0004'; // EOT
+// Marker format: \x02nodeId\x03 (invisible markers around node ID, placed before content)
+const MARKER_START = '\u0002';
+const MARKER_END = '\u0003';
 
-function extractValuePositions(code: string): ValuePositionMap {
-  const positions: ValuePositionMap = new Map();
+/**
+ * Extract start positions of ValueNode content from markers
+ * Marker format: \x02nodeId\x03"content"
+ * We want the position of the content (after the opening quote)
+ */
+function extractValueStarts(code: string): ValueStartMap {
+  const starts: ValueStartMap = new Map();
   const regex = new RegExp(
-    `${MARKER_START}([^${MARKER_SEP}]+)${MARKER_SEP}([^${MARKER_END}]*)${MARKER_END}`,
+    `${MARKER_START}([^${MARKER_END}]+)${MARKER_END}`,
     'g'
   );
 
-  // Two-pass approach: first find all markers, then calculate final positions
-  const markers: Array<{
-    index: number;
-    nodeId: string;
-    content: string;
-    fullMatch: string;
-  }> = [];
-
+  let offset = 0; // Track how many marker chars we've removed
   let match;
   while ((match = regex.exec(code)) !== null) {
-    markers.push({
-      index: match.index,
-      nodeId: match[1],
-      content: match[2],
-      fullMatch: match[0],
-    });
+    const nodeId = match[1];
+    const markerLength = match[0].length;
+    // After marker removal: position of quote = match.index - offset
+    // Position of content = position of quote + 1
+    const contentStart = match.index - offset + 2;
+    starts.set(nodeId, contentStart);
+    offset += markerLength;
   }
 
-  // Calculate positions in final code (after all markers are removed)
-  let removedChars = 0;
-  for (const marker of markers) {
-    const markerOverhead = marker.fullMatch.length - marker.content.length;
-    const finalStart = marker.index - removedChars;
-    const finalEnd = finalStart + marker.content.length;
-
-    positions.set(marker.nodeId, {
-      start: finalStart,
-      end: finalEnd,
-      content: marker.content,
-    });
-
-    removedChars += markerOverhead;
-  }
-
-  return positions;
+  return starts;
 }
 
-function removeMarkers(code: string): string {
+/**
+ * Remove value markers from code
+ */
+function removeValueMarkers(code: string): string {
   const regex = new RegExp(
-    `${MARKER_START}([^${MARKER_SEP}]+)${MARKER_SEP}([^${MARKER_END}]*)${MARKER_END}`,
+    `${MARKER_START}[^${MARKER_END}]+${MARKER_END}`,
     'g'
   );
-  return code.replace(regex, '$2');
+  return code.replace(regex, '');
 }
 
 /**
- * Create trigger string that fires for this node AND all data nodes in the chain
+ * Create trigger string - only used on output node
  */
-function makeTrigger(
-  nodeId: string,
-  nodeType: string,
-  dataNodes: NodeInfo[],
-  includeTriggers: boolean
-): string {
+function makeTrigger(includeTriggers: boolean): string {
   if (!includeTriggers) return '';
-
-  // Build array of all triggers
-  const allTriggers = [
-    `__zyklusTrigger('${nodeId}', hap, '${nodeType}')`,
-    ...dataNodes.map((n) => `__zyklusTrigger('${n.id}', hap, '${n.type}')`),
-  ];
-
-  return `.onTrigger((hap) => { ${allTriggers.join('; ')} }, false)`;
+  return `.onTrigger((hap) => { __zyklusTrigger(hap) }, false)`;
 }
 
 /**
- * Clean code from markers and quotes for use as parameter value
+ * Remove surrounding quotes from code for use as parameter value
  */
-function cleanParamCode(code: string): string {
-  // Remove markers (STX, ETX, EOT characters and node IDs between them)
-  const markerRegex = new RegExp(
-    `\u0002[^\u0003]+\u0003([^\u0004]*)\u0004`,
-    'g'
-  );
-  let cleaned = code.replace(markerRegex, '$1');
-
-  // Remove surrounding quotes if present
-  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-    cleaned = cleaned.slice(1, -1);
+function stripQuotes(code: string): string {
+  if (code.startsWith('"') && code.endsWith('"')) {
+    return code.slice(1, -1);
   }
-
-  return cleaned;
+  return code;
 }
 
 /**
  * Get parameter value based on mode (value, slider, or input)
  * Returns the code string to use as the parameter value
+ * When useRealtime is false, returns static values for querying
+ *
+ * @param nodeId - The node ID
+ * @param currentValue - The current value from node.data.value
+ * @param fallbackValue - The fallback value if currentValue is undefined
+ * @param sourceResults - The source results for input mode
+ * @param useRealtime - Whether to use signal() for real-time updates
  */
 function getParamValue(
   nodeId: string,
-  defaultValue: number,
-  sourceResults: Array<{ edge: Edge; result: BuildResult }>
+  currentValue: number | undefined,
+  fallbackValue: number,
+  sourceResults: Array<{ edge: Edge; result: BuildResult }>,
+  useRealtime: boolean = true
 ): string | number {
   const isInputMode = window.__zyklusInputModes?.[nodeId] ?? false;
   const isSliderMode = window.__zyklusSliderModes?.[nodeId] ?? false;
+  // Use fallback if currentValue is undefined or NaN
+  const value =
+    currentValue !== undefined && Number.isFinite(currentValue)
+      ? currentValue
+      : fallbackValue;
 
   if (isInputMode) {
     // Find the source connected to in-1 (the parameter input)
@@ -179,17 +205,26 @@ function getParamValue(
       (s) => s.edge.targetHandle === 'in-1'
     );
     if (paramInput) {
-      return `"${cleanParamCode(paramInput.result.code)}"`;
+      return `${stripQuotes(paramInput.result.code)}`;
     }
-    // Fallback to default if no input connected
-    return defaultValue;
+    // Fallback to value if no input connected
+    return value;
   }
 
   if (isSliderMode) {
-    return `signal(() => window.__zyklusSliders?.['${nodeId}'] ?? ${defaultValue})`;
+    // For clean code (querying), use current slider value or fallback
+    if (!useRealtime) {
+      const sliderVal = window.__zyklusSliders?.[nodeId];
+      return sliderVal !== undefined && Number.isFinite(sliderVal)
+        ? sliderVal
+        : value;
+    }
+    // Use a helper that ensures we always return a finite number
+    return `signal(() => { const v = window.__zyklusSliders?.['${nodeId}']; return Number.isFinite(v) ? v : ${value}; })`;
   }
 
-  return defaultValue;
+  // Mode "value": use the current value from node data
+  return value;
 }
 
 /**
@@ -224,19 +259,87 @@ function buildCode(
   // Get source type from first source (propagate through chain)
   const inheritedSourceType = sourceResults[0]?.result.sourceType || '';
 
-  switch (node.type) {
-    // === DATA NODES (pass themselves in dataNodes) ===
+  // Get node definition
+  const def = getNodeDefinition(node.type);
 
+  // Handle nodes based on their compile pattern
+  if (def?.compile) {
+    const { compile } = def;
+
+    switch (compile.type) {
+      // === TRANSFORM WITH PARAMETER (slider value) ===
+      case 'transform': {
+        const mainInput = sourceResults.find(
+          (s) => s.edge.targetHandle === 'in-0'
+        );
+        if (!mainInput) return { code: '', sourceType: '', dataNodes: [] };
+        const paramValue = getParamValue(
+          node.id,
+          (node.data as { value?: number }).value,
+          def.slider?.value ?? 1,
+          sourceResults,
+          includeTriggers
+        );
+        console.log(paramValue);
+        return {
+          code: `${mainInput.result.code}.${compile.method}(${paramValue})`,
+          sourceType: mainInput.result.sourceType || inheritedSourceType,
+          dataNodes: allDataNodes,
+        };
+      }
+
+      case 'transformNoParam': {
+        const mainInput = sourceResults.find(
+          (s) => s.edge.targetHandle === 'in-0'
+        );
+        if (!mainInput) return { code: '', sourceType: '', dataNodes: [] };
+        return {
+          code: `${mainInput.result.code}.${compile.method}()`,
+          sourceType: mainInput.result.sourceType || inheritedSourceType,
+          dataNodes: allDataNodes,
+        };
+      }
+
+      case 'transformFixed': {
+        const mainInput = sourceResults.find(
+          (s) => s.edge.targetHandle === 'in-0'
+        );
+        if (!mainInput) return { code: '', sourceType: '', dataNodes: [] };
+        return {
+          code: `${mainInput.result.code}.${compile.method}("${compile.arg}")`,
+          sourceType: mainInput.result.sourceType || inheritedSourceType,
+          dataNodes: allDataNodes,
+        };
+      }
+
+      // === PASSTHROUGH (output) - only place with trigger ===
+      case 'passthrough': {
+        const mainInput = sourceResults.find(
+          (s) => s.edge.targetHandle === 'in-0'
+        );
+        if (!mainInput) return { code: '', sourceType: '', dataNodes: [] };
+        const trigger = makeTrigger(includeTriggers);
+        return {
+          code: `${mainInput.result.code}${trigger}`,
+          sourceType: mainInput.result.sourceType || inheritedSourceType,
+          dataNodes: [],
+        };
+      }
+    }
+  }
+
+  // === CUSTOM NODES (need special handling) ===
+  switch (node.type) {
     case 'value':
       return {
-        code: `"${MARKER_START}${node.id}${MARKER_SEP}${node.data.value}${MARKER_END}"`,
+        // Marker before quote: \x02id\x03"content"
+        // After marker removal, we know content starts at the marker position + 1 (for the quote)
+        code: `${MARKER_START}${node.id}${MARKER_END}"${node.data.value}"`,
         sourceType: 'value',
         dataNodes: [{ id: node.id, type: 'value' }],
       };
 
     case 'slider': {
-      // Use a global variable that can be updated in real-time
-      // Strudel will read this value on each cycle via signal()
       return {
         code: `signal(() => window.__zyklusSliders?.['${node.id}'] ?? ${node.data.value ?? 500})`,
         sourceType: 'slider',
@@ -250,72 +353,38 @@ function buildCode(
         const bIdx = parseInt(b.edge.targetHandle?.split('-')[1] || '0');
         return aIdx - bIdx;
       });
-      // Add trigger to each element for its dataNodes + array itself
       const elements = sorted.map((s) => {
-        // Always include array in the trigger, plus any source dataNodes
-        const triggerNodes = [
-          ...s.result.dataNodes,
-          { id: node.id, type: 'array' },
-        ];
-        const trigger = makeTrigger(
-          node.id,
-          'array',
-          triggerNodes,
-          includeTriggers
-        );
-        return `${s.result.code}${trigger}`;
+        return s.result.code;
       });
       return {
         code: `[${elements.join(', ')}]`,
         sourceType: 'array',
-        dataNodes: [],
+        dataNodes: allDataNodes,
       };
     }
 
-    // === SOURCE NODES (fire triggers for self + data nodes) ===
-
     case 'sound': {
-      const trigger = makeTrigger(
-        node.id,
-        'sound',
-        allDataNodes,
-        includeTriggers
-      );
       const code =
         sourceResults.length > 0
-          ? `${sourceResults[0].result.code}.s()${trigger}`
-          : `"${node.data.sound}".s()${trigger}`;
-      return { code, sourceType: 'sound', dataNodes: [] };
+          ? `${sourceResults[0].result.code}.s()`
+          : `"${(node.data as { sound?: string }).sound}".s()`;
+      return { code, sourceType: 'sound', dataNodes: allDataNodes };
     }
 
     case 'code': {
-      const trigger = makeTrigger(
-        node.id,
-        'code',
-        allDataNodes,
-        includeTriggers
-      );
       return {
-        code: `(${node.data.code})${trigger}`,
+        code: `(${node.data.code})`,
         sourceType: 'code',
-        dataNodes: [],
+        dataNodes: allDataNodes,
       };
     }
 
-    // === PATTERN GENERATORS ===
-
     case 'note': {
-      const trigger = makeTrigger(
-        node.id,
-        'note',
-        allDataNodes,
-        includeTriggers
-      );
       const code =
         sourceResults.length > 0
-          ? `note(${sourceResults[0].result.code})${trigger}`
-          : `note("${node.data.note}")${trigger}`;
-      return { code, sourceType: 'note', dataNodes: [] };
+          ? `note(${sourceResults[0].result.code})`
+          : `note("${(node.data as { note?: string }).note}")`;
+      return { code, sourceType: 'note', dataNodes: allDataNodes };
     }
 
     case 'pick': {
@@ -327,16 +396,10 @@ function buildCode(
       );
       if (!valuesInput || !indicesInput)
         return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'pick',
-        allDataNodes,
-        includeTriggers
-      );
       return {
-        code: `pick(${valuesInput.result.code}, ${indicesInput.result.code})${trigger}`,
+        code: `pick(${valuesInput.result.code}, ${indicesInput.result.code})`,
         sourceType: 'pick',
-        dataNodes: [],
+        dataNodes: allDataNodes,
       };
     }
 
@@ -349,367 +412,14 @@ function buildCode(
       );
       if (!patternInput || !structInput)
         return { code: '', sourceType: '', dataNodes: [] };
-      // Include dataNodes from both inputs for proper triggering
       const combinedDataNodes = [
         ...patternInput.result.dataNodes,
         ...structInput.result.dataNodes,
       ];
-      const trigger = makeTrigger(
-        node.id,
-        'struct',
-        combinedDataNodes,
-        includeTriggers
-      );
       return {
-        code: `${patternInput.result.code}.struct(${structInput.result.code})${trigger}`,
+        code: `${patternInput.result.code}.struct(${structInput.result.code})`,
         sourceType: 'struct',
-        dataNodes: [],
-      };
-    }
-
-    // === TRANSFORM NODES ===
-
-    case 'fast': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'fast',
-        allDataNodes,
-        includeTriggers
-      );
-      const fastValue = getParamValue(
-        node.id,
-        node.data.value ?? 2,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.fast(${fastValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'slow': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'slow',
-        allDataNodes,
-        includeTriggers
-      );
-      const slowValue = getParamValue(
-        node.id,
-        node.data.value ?? 2,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.slow(${slowValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'rev': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'rev',
-        allDataNodes,
-        includeTriggers
-      );
-      return {
-        code: `${sourceResults[0].result.code}.rev()${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'supersaw': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'supersaw',
-        allDataNodes,
-        includeTriggers
-      );
-      return {
-        code: `${sourceResults[0].result.code}.sound("supersaw")${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'gain': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'gain',
-        allDataNodes,
-        includeTriggers
-      );
-      const gainValue = getParamValue(
-        node.id,
-        node.data.value ?? 0.8,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.gain(${gainValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'reverb': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'reverb',
-        allDataNodes,
-        includeTriggers
-      );
-      const reverbValue = getParamValue(
-        node.id,
-        node.data.value ?? 0.5,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.room(${reverbValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'delay': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'delay',
-        allDataNodes,
-        includeTriggers
-      );
-      const delayValue = getParamValue(
-        node.id,
-        node.data.value ?? 0.5,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.delay(${delayValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'lpf': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'lpf',
-        allDataNodes,
-        includeTriggers
-      );
-      const freqValue = getParamValue(
-        node.id,
-        node.data.value ?? 1000,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.lpf(${freqValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'lpenv': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'lpenv',
-        allDataNodes,
-        includeTriggers
-      );
-      const envValue = getParamValue(
-        node.id,
-        node.data.value ?? 4,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.lpenv(${envValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'room': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'room',
-        allDataNodes,
-        includeTriggers
-      );
-      const roomValue = getParamValue(
-        node.id,
-        node.data.value ?? 0.5,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.room(${roomValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'attack': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'attack',
-        allDataNodes,
-        includeTriggers
-      );
-      const attackValue = getParamValue(
-        node.id,
-        node.data.value ?? 0.01,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.attack(${attackValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'sustain': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'sustain',
-        allDataNodes,
-        includeTriggers
-      );
-      const sustainValue = getParamValue(
-        node.id,
-        node.data.value ?? 0.5,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.sustain(${sustainValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'release': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'release',
-        allDataNodes,
-        includeTriggers
-      );
-      const releaseValue = getParamValue(
-        node.id,
-        node.data.value ?? 0.1,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.release(${releaseValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'postgain': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'postgain',
-        allDataNodes,
-        includeTriggers
-      );
-      const postgainValue = getParamValue(
-        node.id,
-        node.data.value ?? 0.8,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.postgain(${postgainValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'pcurve': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'pcurve',
-        allDataNodes,
-        includeTriggers
-      );
-      const pcurveValue = getParamValue(
-        node.id,
-        node.data.value ?? 2,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.pcurve(${pcurveValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    case 'pdecay': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'pdecay',
-        allDataNodes,
-        includeTriggers
-      );
-      const pdecayValue = getParamValue(
-        node.id,
-        node.data.value ?? 0.1,
-        sourceResults
-      );
-      return {
-        code: `${sourceResults[0].result.code}.pdecay(${pdecayValue})${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
-      };
-    }
-
-    // === OUTPUT NODE ===
-
-    case 'output': {
-      if (sourceResults.length === 0)
-        return { code: '', sourceType: '', dataNodes: [] };
-      const trigger = makeTrigger(
-        node.id,
-        'output',
-        allDataNodes,
-        includeTriggers
-      );
-      return {
-        code: `${sourceResults[0].result.code}${trigger}`,
-        sourceType: inheritedSourceType,
-        dataNodes: [],
+        dataNodes: combinedDataNodes,
       };
     }
 

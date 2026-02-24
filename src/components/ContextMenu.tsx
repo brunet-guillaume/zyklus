@@ -61,6 +61,10 @@ const NODE_CATEGORIES = [
     label: 'Output',
     nodes: [{ type: 'output', label: 'Output' }],
   },
+  {
+    label: 'Global',
+    nodes: [{ type: 'cpm', label: 'CPM (Tempo)' }],
+  },
 ];
 
 // Estimated menu dimensions for initial positioning

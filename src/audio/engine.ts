@@ -91,35 +91,85 @@ function compareNotes(
   return 1;
 }
 
-// Dispatch trigger event for a single node
-function dispatchTrigger(nodeId: string, hap?: Hap, nodeType?: string) {
-  // Get timing info from hap (convert Fraction to number)
-  const timing = hap
-    ? {
-        start: Number(hap.whole?.begin ?? hap.part.begin),
-        end: Number(hap.whole?.end ?? hap.part.end),
-      }
-    : undefined;
+// Convert Strudel Fraction {s, n, d} to number
+function fractionToNumber(frac: unknown): number {
+  if (typeof frac === 'number') return frac;
+  if (
+    frac &&
+    typeof frac === 'object' &&
+    's' in frac &&
+    'n' in frac &&
+    'd' in frac
+  ) {
+    const { s, n, d } = frac as { s: bigint; n: bigint; d: bigint };
+    return (Number(s) * Number(n)) / Number(d);
+  }
+  return 0;
+}
 
-  // Extract note value for sorting
+// Dispatch trigger event - called once per hap from the single onTrigger
+function dispatchTrigger(hap?: Hap) {
+  if (!hap) return;
+
+  // Get timing info from hap (convert Fraction to number)
+  const timing = {
+    start: fractionToNumber(hap.whole?.begin ?? hap.part.begin),
+    end: fractionToNumber(hap.whole?.end ?? hap.part.end),
+  };
+
+  // Extract note value
   const note = extractNote(hap);
 
-  window.dispatchEvent(
-    new CustomEvent('zyklus:trigger', {
-      detail: {
-        nodeId,
-        nodeType: nodeType ?? 'unknown',
-        timing,
-        note,
-      },
-    })
-  );
+  // Get locations from hap
+  const locations = (
+    hap as { context?: { locations?: Array<{ start: number; end: number }> } }
+  )?.context?.locations;
+
+  if (!locations || locations.length === 0) return;
+
+  const valueStarts = window.__zyklusValueStarts;
+  if (!valueStarts) return;
+
+  // For each location, find which ValueNode it belongs to
+  for (const loc of locations) {
+    // Find the ValueNode with the closest contentStart that's <= loc.start
+    let matchedNodeId: string | null = null;
+    let matchedContentStart = -1;
+
+    for (const [nodeId, contentStart] of valueStarts.entries()) {
+      if (contentStart <= loc.start && contentStart > matchedContentStart) {
+        matchedNodeId = nodeId;
+        matchedContentStart = contentStart;
+      }
+    }
+
+    if (matchedNodeId) {
+      // Calculate relative position within the ValueNode content
+      const relativeLocation = {
+        start: loc.start - matchedContentStart,
+        end: loc.end - matchedContentStart,
+      };
+
+      window.dispatchEvent(
+        new CustomEvent('zyklus:trigger', {
+          detail: {
+            nodeId: matchedNodeId,
+            nodeType: 'value',
+            timing,
+            note,
+            location: relativeLocation,
+            hap,
+          },
+        })
+      );
+    }
+  }
 }
 
 // Make the trigger function globally accessible
 declare global {
   interface Window {
-    __zyklusTrigger: (nodeId: string, hap?: Hap, nodeType?: string) => void;
+    __zyklusTrigger: (hap?: Hap) => void;
   }
 }
 
@@ -145,8 +195,6 @@ export async function initAudio() {
 export async function queryEvents(cleanCode: string): Promise<void> {
   await initAudio();
 
-  console.log('[Events] Clean code:', cleanCode);
-
   try {
     // Query events and store in window for retrieval
     // Query 4 cycles to capture patterns with slow() and alternating sequences like <0 1 2 3>
@@ -171,11 +219,6 @@ export async function queryEvents(cleanCode: string): Promise<void> {
     ).__zyklusLocations;
 
     if (locations) {
-      console.log(
-        '[Events] Raw locations:',
-        JSON.parse(JSON.stringify(locations))
-      );
-
       // Deduplicate by note - keep only one event per unique note
       const seenNotes = new Set<string>();
       const uniqueLocations = locations.filter((loc) => {
@@ -191,8 +234,6 @@ export async function queryEvents(cleanCode: string): Promise<void> {
         return noteCompare !== 0 ? noteCompare : a.start - b.start;
       });
 
-      console.log('[Events] Unique sorted locations:', uniqueLocations);
-
       window.dispatchEvent(
         new CustomEvent('zyklus:events', {
           detail: { locations: uniqueLocations },
@@ -207,7 +248,10 @@ export async function queryEvents(cleanCode: string): Promise<void> {
 // Play Strudel code
 export async function playCode(code: string): Promise<void> {
   await initAudio();
-  await evaluate(`(${code}).play()`);
+  const fullCode = `(${code}).play()`;
+  window.__zyklusCompiledCode = fullCode;
+  await evaluate(fullCode);
+  console.log(fullCode);
 }
 
 // Stop playback using hush()

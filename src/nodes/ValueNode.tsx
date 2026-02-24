@@ -1,40 +1,14 @@
 import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import type { ValueNode as ValueNodeType } from './types';
 import { BaseNode } from './BaseNode';
 import { useTrigger } from '../hooks/useTrigger';
 import { useEvents } from '../hooks/useEvents';
 
-// Parse mini-notation to extract elements and their positions
-function parseElements(
-  value: string
-): Array<{ text: string; start: number; end: number }> {
-  const elements: Array<{ text: string; start: number; end: number }> = [];
-  // Remove outer brackets like < > [ ] { }
-  const inner = value.replace(/^[<[{]|[>\]}]$/g, '').trim();
-
-  // Split by spaces
-  const regex = /\S+/g;
-  let match;
-  while ((match = regex.exec(inner)) !== null) {
-    // Adjust position for removed opening bracket
-    const offset =
-      value.startsWith('<') || value.startsWith('[') || value.startsWith('{')
-        ? 1
-        : 0;
-    elements.push({
-      text: match[0],
-      start: match.index + offset,
-      end: match.index + offset + match[0].length,
-    });
-  }
-  return elements;
-}
-
 export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
-  const { isTriggered, note, timing } = useTrigger(id);
+  const { isTriggered, activeEvents } = useTrigger(id);
   const events = useEvents();
 
   const inputErrorFn = (index: number) => {
@@ -49,59 +23,97 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
     );
   };
 
-  // Find the position of the triggered element in the value string
-  const highlightRange = useMemo(() => {
-    if (!isTriggered) return null;
+  // Convert active events to highlight ranges using location data
+  const highlightRanges = useMemo(() => {
+    if (!isTriggered || activeEvents.length === 0) return [];
+
     const value = data.value || '';
+    const ranges: Array<{ start: number; end: number; duration: number }> = [];
 
-    // Check if this value looks like a rhythm/struct pattern (contains x or ~)
-    // These patterns use timing-based highlighting, not note matching
-    const isRhythmPattern = /[x~]/.test(value);
+    for (const event of activeEvents) {
+      if (!event.location) continue;
 
-    // Try to match by note content (but NOT for rhythm patterns)
-    if (!isRhythmPattern && note !== null && note !== undefined) {
-      const noteStr = String(note);
-      const index = value.indexOf(noteStr);
-      if (index !== -1) {
-        return { start: index, end: index + noteStr.length };
+      const { start, end } = event.location;
+      // Validate bounds
+      if (start >= 0 && end <= value.length && start < end) {
+        ranges.push({ start, end, duration: event.duration });
       }
     }
 
-    // For rhythm patterns or if note not found, try to match by timing
-    if (timing) {
-      const elements = parseElements(value);
-      if (elements.length > 0) {
-        const isSlow = value.startsWith('<'); // <> = slow sequence (one per cycle)
-        const isFast = value.startsWith('['); // [] = fast sequence (all within cycle)
-
-        let elementIndex: number;
-        if (isSlow) {
-          // Slow sequence: element changes each cycle
-          const cycle = Math.floor(timing.start);
-          elementIndex = cycle % elements.length;
-        } else if (isFast) {
-          // Fast sequence: all elements within one cycle
-          const pos = timing.start % 1;
-          elementIndex = Math.floor(pos * elements.length);
-        } else {
-          // Default: use position within cycle
-          const pos = timing.start % 1;
-          elementIndex = Math.floor(pos * elements.length);
-        }
-
-        const element = elements[Math.min(elementIndex, elements.length - 1)];
-        if (element) {
-          return { start: element.start, end: element.end };
-        }
+    // Sort by start position and merge overlapping ranges
+    ranges.sort((a, b) => a.start - b.start);
+    const merged: Array<{ start: number; end: number; duration: number }> = [];
+    for (const range of ranges) {
+      const last = merged[merged.length - 1];
+      if (last && range.start <= last.end) {
+        last.end = Math.max(last.end, range.end);
+        last.duration = Math.max(last.duration, range.duration);
+      } else {
+        merged.push({ ...range });
       }
     }
 
-    return null;
-  }, [isTriggered, note, timing, data.value]);
+    return merged;
+  }, [isTriggered, activeEvents, data.value]);
+
+  // Build HTML content with highlights and duration for animation
+  const htmlContent = useMemo(() => {
+    const value = data.value || '';
+    if (highlightRanges.length === 0) {
+      return value;
+    }
+
+    let result = '';
+    let pos = 0;
+
+    for (const range of highlightRanges) {
+      if (range.start > pos) {
+        result += value.slice(pos, range.start);
+      }
+      result += `<mark style="--duration: ${range.duration}ms">${value.slice(range.start, range.end)}</mark>`;
+      pos = range.end;
+    }
+
+    if (pos < value.length) {
+      result += value.slice(pos);
+    }
+
+    return result;
+  }, [highlightRanges, data.value]);
+
+  const editableRef = useRef<HTMLDivElement>(null);
+  const lastValueRef = useRef(data.value);
+
+  // Update content when highlights change (but not when user is typing)
+  useEffect(() => {
+    if (editableRef.current && document.activeElement !== editableRef.current) {
+      editableRef.current.innerHTML = htmlContent;
+    }
+  }, [htmlContent]);
+
+  // Update content when data.value changes externally
+  useEffect(() => {
+    if (editableRef.current && data.value !== lastValueRef.current) {
+      lastValueRef.current = data.value;
+      if (document.activeElement !== editableRef.current) {
+        editableRef.current.innerHTML = htmlContent;
+      }
+    }
+  }, [data.value, htmlContent]);
+
+  const handleInput = () => {
+    if (editableRef.current) {
+      const text = editableRef.current.textContent || '';
+      lastValueRef.current = text;
+      updateNodeData(id, { value: text });
+    }
+  };
 
   return (
     <BaseNode
       type="value"
+      label="Value"
+      nodeId={id}
       events={events}
       inputs={0}
       outputs={1}
@@ -110,31 +122,15 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
     >
-      <div className="auto-width-input text-xs relative">
+      <div className="auto-width-input text-xs">
         <span>{data.value || ' '}</span>
-        <input
-          type="text"
-          value={data.value}
-          onChange={(e) => updateNodeData(id, { value: e.target.value })}
-          placeholder="Value"
-          className={
-            highlightRange
-              ? 'text-(--node-color)/20'
-              : 'text-(--node-color)/20 focus:text-(--node-color)'
-          }
+        <div
+          ref={editableRef}
+          contentEditable
+          onInput={handleInput}
+          className="input editable outline-none whitespace-pre"
+          dangerouslySetInnerHTML={{ __html: htmlContent }}
         />
-        {highlightRange && (
-          <div
-            className="absolute inset-0 px-2 py-1 bg-transparent pointer-events-none whitespace-pre text-transparent"
-            aria-hidden="true"
-          >
-            {data.value.slice(0, highlightRange.start)}
-            <mark className="visible bg-(--node-color) px-1 -mx-1 py-0.5 font-bold text-black rounded-sm not-italic">
-              {data.value.slice(highlightRange.start, highlightRange.end)}
-            </mark>
-            {data.value.slice(highlightRange.end)}
-          </div>
-        )}
       </div>
     </BaseNode>
   );

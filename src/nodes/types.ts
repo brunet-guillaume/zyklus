@@ -1,217 +1,101 @@
 import type { Node } from '@xyflow/react';
 
-export type SoundNodeData = Record<string, never>;
+// === Base data types ===
 
-export type NoteNodeData = Record<string, never>;
+// For nodes without any state
+export type SimpleNodeData = Record<string, never>;
 
-export type FastNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
-
-export type SlowNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
-
-export type RevNodeData = Record<string, never>;
-
-export type SupersawNodeData = Record<string, never>;
-
+// For nodes with slider support (shared by 14 nodes)
 export type SliderNodeData = {
+  value: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  isSlider?: boolean;
+  isInput?: boolean;
+  expanded?: boolean;
+};
+
+// === Special node data types ===
+
+export type OutputNodeData = {
+  isPlaying: boolean;
+};
+
+export type ValueNodeData = {
+  value: string;
+};
+
+export type ArrayNodeData = {
+  inputCount: number;
+};
+
+export type CodeNodeData = {
+  code: string;
+};
+
+export type PickNodeData = {
+  values: string;
+  indices: string;
+};
+
+// Standalone slider (different from slider-enabled nodes)
+export type StandaloneSliderNodeData = {
   min?: number;
   max?: number;
   value?: number;
   step?: number;
 };
 
-export type GainNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
+// === Node type definitions ===
 
-export type ReverbNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
+// Simple nodes (no data)
+export type SoundNode = Node<SimpleNodeData, 'sound'>;
+export type NoteNode = Node<SimpleNodeData, 'note'>;
+export type RevNode = Node<SimpleNodeData, 'rev'>;
+export type SupersawNode = Node<SimpleNodeData, 'supersaw'>;
+export type StructNode = Node<SimpleNodeData, 'struct'>;
+export type PickNode = Node<SimpleNodeData, 'pick'>;
 
-export type DelayNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
+// Slider nodes (all use SliderNodeData)
+export type FastNode = Node<SliderNodeData, 'fast'>;
+export type SlowNode = Node<SliderNodeData, 'slow'>;
+export type GainNode = Node<SliderNodeData, 'gain'>;
+export type ReverbNode = Node<SliderNodeData, 'reverb'>;
+export type DelayNode = Node<SliderNodeData, 'delay'>;
+export type LpfNode = Node<SliderNodeData, 'lpf'>;
+export type LpEnvNode = Node<SliderNodeData, 'lpenv'>;
+export type RoomNode = Node<SliderNodeData, 'room'>;
+export type AttackNode = Node<SliderNodeData, 'attack'>;
+export type SustainNode = Node<SliderNodeData, 'sustain'>;
+export type ReleaseNode = Node<SliderNodeData, 'release'>;
+export type PostgainNode = Node<SliderNodeData, 'postgain'>;
+export type PcurveNode = Node<SliderNodeData, 'pcurve'>;
+export type PdecayNode = Node<SliderNodeData, 'pdecay'>;
 
-export type LpfNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
-
-export type LpEnvNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
-
-export type RoomNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
-
-export type AttackNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
-
-export type SustainNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
-
-export type ReleaseNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
-
-export type PostgainNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
-
-export type PcurveNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
-
-export type PdecayNodeData = {
-  value: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  isSlider?: boolean;
-  isInput?: boolean;
-  expanded?: boolean;
-};
-
-export type OutputNodeData = {
-  isPlaying: boolean;
-};
-
-export type PickNodeData = {
-  values: string; // comma-separated values (e.g., "c3, e3, g3, c4")
-  indices: string; // index pattern (e.g., "<0 1 2 3>")
-};
-
-export type StructNodeData = Record<string, never>;
-
-export type ValueNodeData = {
-  value: string; // single value (e.g., "c3" or "bd")
-};
-
-export type ArrayNodeData = {
-  inputCount: number; // number of input handles
-};
-
-export type CodeNodeData = {
-  code: string; // raw Strudel code
-};
-
-export type SoundNode = Node<SoundNodeData, 'sound'>;
-export type NoteNode = Node<NoteNodeData, 'note'>;
-export type FastNode = Node<FastNodeData, 'fast'>;
-export type SlowNode = Node<SlowNodeData, 'slow'>;
-export type RevNode = Node<RevNodeData, 'rev'>;
-export type SupersawNode = Node<SupersawNodeData, 'supersaw'>;
-export type SliderNode = Node<SliderNodeData, 'slider'>;
-export type GainNode = Node<GainNodeData, 'gain'>;
-export type ReverbNode = Node<ReverbNodeData, 'reverb'>;
-export type DelayNode = Node<DelayNodeData, 'delay'>;
-export type LpfNode = Node<LpfNodeData, 'lpf'>;
-export type LpEnvNode = Node<LpEnvNodeData, 'lpenv'>;
-export type RoomNode = Node<RoomNodeData, 'room'>;
-export type AttackNode = Node<AttackNodeData, 'attack'>;
-export type SustainNode = Node<SustainNodeData, 'sustain'>;
-export type ReleaseNode = Node<ReleaseNodeData, 'release'>;
-export type PostgainNode = Node<PostgainNodeData, 'postgain'>;
-export type PcurveNode = Node<PcurveNodeData, 'pcurve'>;
-export type PdecayNode = Node<PdecayNodeData, 'pdecay'>;
+// Special nodes
 export type OutputNode = Node<OutputNodeData, 'output'>;
-export type PickNode = Node<PickNodeData, 'pick'>;
-export type StructNode = Node<StructNodeData, 'struct'>;
+export type SliderNode = Node<StandaloneSliderNodeData, 'slider'>;
 export type ValueNode = Node<ValueNodeData, 'value'>;
 export type ArrayNode = Node<ArrayNodeData, 'array'>;
 export type CodeNode = Node<CodeNodeData, 'code'>;
 
+// Global nodes (standalone)
+export type CpmNode = Node<SliderNodeData, 'cpm'>;
+
+// === Union type for all nodes ===
+
 export type AppNode =
+  // Simple nodes
   | SoundNode
   | NoteNode
-  | FastNode
-  | SlowNode
   | RevNode
   | SupersawNode
-  | SliderNode
+  | StructNode
+  | PickNode
+  // Slider nodes
+  | FastNode
+  | SlowNode
   | GainNode
   | ReverbNode
   | DelayNode
@@ -224,9 +108,35 @@ export type AppNode =
   | PostgainNode
   | PcurveNode
   | PdecayNode
+  // Special nodes
   | OutputNode
-  | PickNode
-  | StructNode
+  | SliderNode
   | ValueNode
   | ArrayNode
-  | CodeNode;
+  | CodeNode
+  // Global nodes
+  | CpmNode;
+
+// === Legacy exports for backwards compatibility ===
+// (can be removed once all code is migrated)
+
+export type SoundNodeData = SimpleNodeData;
+export type NoteNodeData = SimpleNodeData;
+export type RevNodeData = SimpleNodeData;
+export type SupersawNodeData = SimpleNodeData;
+export type StructNodeData = SimpleNodeData;
+export type FastNodeData = SliderNodeData;
+export type SlowNodeData = SliderNodeData;
+export type GainNodeData = SliderNodeData;
+export type ReverbNodeData = SliderNodeData;
+export type DelayNodeData = SliderNodeData;
+export type LpfNodeData = SliderNodeData;
+export type LpEnvNodeData = SliderNodeData;
+export type RoomNodeData = SliderNodeData;
+export type AttackNodeData = SliderNodeData;
+export type SustainNodeData = SliderNodeData;
+export type ReleaseNodeData = SliderNodeData;
+export type PostgainNodeData = SliderNodeData;
+export type PcurveNodeData = SliderNodeData;
+export type PdecayNodeData = SliderNodeData;
+export type SliderNodeData2 = StandaloneSliderNodeData;
