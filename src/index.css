@@ -12,6 +12,7 @@
   --value: #fbbf24;
   --array: #818cf8;
   --pick: #22d3ee;
+  --struct: #14b8a6;
   --fast: #60a5fa;
   --slow: #a78bfa;
   --rev: #f472b6;
@@ -22,6 +23,13 @@
   --delay: #16a34a;
   --lpf: #15803d;
   --lpenv: #166534;
+  --room: #059669;
+  --attack: #f43f5e;
+  --sustain: #ec4899;
+  --release: #d946ef;
+  --postgain: #84cc16;
+  --pcurve: #06b6d4;
+  --pdecay: #0891b2;
   --output: #fb923c;
 }
 
@@ -44,9 +52,7 @@ body {
 
 /* Remove default React Flow node styles */
 .react-flow__node {
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
+  @apply pointer-events-none! bg-transparent! border-0! p-0! shadow-none!;
 }
 
 /* Style React Flow controls (zoom buttons) */
@@ -119,6 +125,9 @@ body {
 .pick {
   --node-color: var(--pick);
 }
+.struct {
+  --node-color: var(--struct);
+}
 .fast {
   --node-color: var(--fast);
 }
@@ -149,13 +158,34 @@ body {
 .lpenv {
   --node-color: var(--lpenv);
 }
+.room {
+  --node-color: var(--room);
+}
+.attack {
+  --node-color: var(--attack);
+}
+.sustain {
+  --node-color: var(--sustain);
+}
+.release {
+  --node-color: var(--release);
+}
+.postgain {
+  --node-color: var(--postgain);
+}
+.pcurve {
+  --node-color: var(--pcurve);
+}
+.pdecay {
+  --node-color: var(--pdecay);
+}
 .output {
   --node-color: var(--output);
 }
 
 /* Generic node styles using --node-color */
 .node {
-  @apply rounded-lg backdrop-blur-sm bg-black/5 min-w-20 min-h-5;
+  @apply rounded-lg backdrop-blur-sm bg-black/5 min-w-20 min-h-5 pointer-events-auto;
   @apply text-(--node-color)/70;
   outline: 1px solid color-mix(in srgb, var(--node-color) 70%, transparent);
 }

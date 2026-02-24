@@ -54,8 +54,12 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
     if (!isTriggered) return null;
     const value = data.value || '';
 
-    // First try to match by note content
-    if (note !== null && note !== undefined) {
+    // Check if this value looks like a rhythm/struct pattern (contains x or ~)
+    // These patterns use timing-based highlighting, not note matching
+    const isRhythmPattern = /[x~]/.test(value);
+
+    // Try to match by note content (but NOT for rhythm patterns)
+    if (!isRhythmPattern && note !== null && note !== undefined) {
       const noteStr = String(note);
       const index = value.indexOf(noteStr);
       if (index !== -1) {
@@ -63,7 +67,7 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
       }
     }
 
-    // If note not found, try to match by timing (for indices like <0 1 2 3>)
+    // For rhythm patterns or if note not found, try to match by timing
     if (timing) {
       const elements = parseElements(value);
       if (elements.length > 0) {

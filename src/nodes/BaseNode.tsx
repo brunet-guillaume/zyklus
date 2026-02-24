@@ -39,6 +39,8 @@ interface BaseNodeProps {
   slider?: SliderConfig; // Optional slider control
   isSliderMode?: boolean; // Whether slider mode is active (persisted)
   onSliderModeChange?: (isSlider: boolean) => void; // Callback when slider mode changes
+  isInputMode?: boolean; // Whether input mode is active (value from connected node)
+  onInputModeChange?: (isInput: boolean) => void; // Callback when input mode changes
   expanded?: boolean; // Whether tools panel is expanded (persisted)
   onExpandedChange?: (expanded: boolean) => void; // Callback when expanded changes
   className?: string; // Additional CSS classes
@@ -65,6 +67,8 @@ export function BaseNode({
   slider,
   isSliderMode = false,
   onSliderModeChange,
+  isInputMode = false,
+  onInputModeChange,
   expanded: expandedProp = false,
   onExpandedChange,
   className = '',
@@ -72,11 +76,16 @@ export function BaseNode({
   const handleSpacing = 20;
   const titleOffset = 4;
   const [isSlider, setIsSlider] = useState(isSliderMode);
+  const [isInput, setIsInput] = useState(isInputMode);
 
   // Sync local state with prop when it changes
   useEffect(() => {
     setIsSlider(isSliderMode);
   }, [isSliderMode]);
+
+  useEffect(() => {
+    setIsInput(isInputMode);
+  }, [isInputMode]);
 
   // Sync slider value to global variable for real-time Strudel access (only in slider mode)
   const sliderValue = slider?.value;
@@ -98,6 +107,16 @@ export function BaseNode({
       window.__zyklusSliderModes[nodeId] = isSlider;
     }
   }, [nodeId, isSlider]);
+
+  // Sync isInput mode to global variable for compiler access
+  useEffect(() => {
+    if (nodeId) {
+      if (!window.__zyklusInputModes) {
+        window.__zyklusInputModes = {};
+      }
+      window.__zyklusInputModes[nodeId] = isInput;
+    }
+  }, [nodeId, isInput]);
 
   // Track which event squares are triggered
   const [triggeredSquares, setTriggeredSquares] = useState<Set<number>>(
@@ -177,8 +196,13 @@ export function BaseNode({
     };
   }, [nodeId, events]);
 
-  const maxHandles = Math.max(inputs, outputs);
-  const hasLabels = inputLabels && inputLabels.length > 0;
+  // Add extra input handle when in input mode
+  const actualInputs = slider && isInput ? inputs + 1 : inputs;
+  const maxHandles = Math.max(actualInputs, outputs);
+
+  // Generate labels for input mode (in, value)
+  const actualInputLabels = slider && isInput ? ['in', 'value'] : inputLabels;
+  const hasLabels = actualInputLabels && actualInputLabels.length > 0;
 
   // Generate radial gradient from border types
   const borderGradient =
@@ -213,7 +237,8 @@ export function BaseNode({
       }
     >
       {/* Event squares - first */}
-      {events.length > 0 && (
+      {/* TODO: clear that*/}
+      {events.length == 0 && (
         <div
           className={`absolute overflow-hidden top-0 left-0 right-0 h-5 rounded-lg`}
         >
@@ -242,8 +267,8 @@ export function BaseNode({
 
       {label && <div className="title">{label}</div>}
 
-      {/* Optional slider or input based on isSlider state */}
-      {slider && isSlider && (
+      {/* Optional slider or input based on mode */}
+      {slider && isSlider && !isInput && (
         <div className="content w-full">
           <input
             type="range"
@@ -268,7 +293,7 @@ export function BaseNode({
           </div>
         </div>
       )}
-      {slider && !isSlider && (
+      {slider && !isSlider && !isInput && (
         <div className="content">
           <input
             className="w-full"
@@ -296,7 +321,7 @@ export function BaseNode({
               : { minHeight: maxHandles * handleSpacing + 8 }
           }
         >
-          {inputLabels?.map((lbl, i) => (
+          {actualInputLabels?.map((lbl, i) => (
             <span
               key={i}
               className="absolute p-2 px-3 left-0 text-xs opacity-70 -translate-y-1/2 whitespace-nowrap"
@@ -314,22 +339,37 @@ export function BaseNode({
         <div className="tools">
           <div className="flex w-full text-center gap-1 bg-white/3 p-1 rounded-md">
             <div
-              className={`flex-1 transition-colors ${isSlider ? 'bg-black/0 hover:bg-black/15' : 'bg-black/50 hover:bg-black/75'} rounded`}
+              className={`flex-1 transition-colors ${!isSlider && !isInput ? 'bg-black/50 hover:bg-black/75' : 'bg-black/0 hover:bg-black/15'} rounded`}
               onClick={() => {
                 setIsSlider(false);
+                setIsInput(false);
                 onSliderModeChange?.(false);
+                onInputModeChange?.(false);
               }}
             >
               Value
             </div>
             <div
-              className={`flex-1 transition-colors ${!isSlider ? 'bg-black/0 hover:bg-black/15' : 'bg-black/50 hover:bg-black/75'} bg-black/0 rounded`}
+              className={`flex-1 transition-colors ${isSlider && !isInput ? 'bg-black/50 hover:bg-black/75' : 'bg-black/0 hover:bg-black/15'} rounded`}
               onClick={() => {
                 setIsSlider(true);
+                setIsInput(false);
                 onSliderModeChange?.(true);
+                onInputModeChange?.(false);
               }}
             >
               Slider
+            </div>
+            <div
+              className={`flex-1 transition-colors ${isInput ? 'bg-black/50 hover:bg-black/75' : 'bg-black/0 hover:bg-black/15'} rounded`}
+              onClick={() => {
+                setIsSlider(false);
+                setIsInput(true);
+                onSliderModeChange?.(false);
+                onInputModeChange?.(true);
+              }}
+            >
+              Input
             </div>
           </div>
           {slider && (
@@ -375,11 +415,11 @@ export function BaseNode({
       )}
 
       {/* Input handles */}
-      {Array.from({ length: inputs }).map((_, i) => {
+      {Array.from({ length: actualInputs }).map((_, i) => {
         const hasError = inputErrorFn?.(i) ?? false;
         const handleType = inputHandleTypes?.[i];
         const top =
-          inputs === 1 && !hasLabels
+          actualInputs === 1 && !hasLabels
             ? '50%'
             : titleOffset + handleSpacing / 2 + i * handleSpacing;
         return (

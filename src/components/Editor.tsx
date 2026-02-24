@@ -67,6 +67,8 @@ function getDefaultData(type: string) {
       return { inputCount: 2 };
     case 'pick':
       return { values: 'c3, e3, g3, c4', indices: '<0 1 2 3>' };
+    case 'struct':
+      return {};
     case 'fast':
       return { value: 2 };
     case 'slow':
@@ -87,6 +89,20 @@ function getDefaultData(type: string) {
       return { value: 1000 };
     case 'lpenv':
       return { value: 4 };
+    case 'room':
+      return { value: 0.5 };
+    case 'attack':
+      return { value: 0.01 };
+    case 'sustain':
+      return { value: 0.5 };
+    case 'release':
+      return { value: 0.1 };
+    case 'postgain':
+      return { value: 0.8 };
+    case 'pcurve':
+      return { value: 2 };
+    case 'pdecay':
+      return { value: 0.1 };
     case 'output':
       return { isPlaying: false };
     default:

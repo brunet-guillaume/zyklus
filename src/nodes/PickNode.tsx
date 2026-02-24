@@ -33,7 +33,7 @@ export function PickNode({ id, selected }: NodeProps<PickNodeType>) {
       triggered={triggered}
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
-      inputLabels={['Values', 'Indices']}
+      inputLabels={['values', 'indices']}
     />
   );
 }

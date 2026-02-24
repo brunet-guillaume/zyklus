@@ -69,8 +69,18 @@ export function GradientEdge({
   const gradientId = `gradient-${id}`;
   const sourceType = sourceNode?.type;
   const targetType = targetNode?.type;
-  const sourceColor = sourceType ? `var(--${sourceType})` : '#818CF8';
-  const targetColor = targetType ? `var(--${targetType})` : '#F472B6';
+
+  const isActive = selected || isTriggered;
+  const sourceColor = isActive
+    ? sourceType
+      ? `var(--${sourceType})`
+      : '#818CF8'
+    : '#4B5563';
+  const targetColor = isActive
+    ? targetType
+      ? `var(--${targetType})`
+      : '#F472B6'
+    : '#6B7280';
 
   const strokeWidth = selected ? 3 : isTriggered ? 3.5 : 1;
 
@@ -107,7 +117,8 @@ export function GradientEdge({
           ...style,
           stroke: `url(#${gradientId})`,
           strokeWidth,
-          transition: 'stroke-width 0.3s ease-out',
+          opacity: 1,
+          transition: 'stroke-width 0.3s ease-out, opacity 0.3s ease-out',
         }}
         markerEnd={markerEnd}
       />

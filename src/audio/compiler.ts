@@ -143,6 +143,56 @@ function makeTrigger(
 }
 
 /**
+ * Clean code from markers and quotes for use as parameter value
+ */
+function cleanParamCode(code: string): string {
+  // Remove markers (STX, ETX, EOT characters and node IDs between them)
+  const markerRegex = new RegExp(
+    `\u0002[^\u0003]+\u0003([^\u0004]*)\u0004`,
+    'g'
+  );
+  let cleaned = code.replace(markerRegex, '$1');
+
+  // Remove surrounding quotes if present
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.slice(1, -1);
+  }
+
+  return cleaned;
+}
+
+/**
+ * Get parameter value based on mode (value, slider, or input)
+ * Returns the code string to use as the parameter value
+ */
+function getParamValue(
+  nodeId: string,
+  defaultValue: number,
+  sourceResults: Array<{ edge: Edge; result: BuildResult }>
+): string | number {
+  const isInputMode = window.__zyklusInputModes?.[nodeId] ?? false;
+  const isSliderMode = window.__zyklusSliderModes?.[nodeId] ?? false;
+
+  if (isInputMode) {
+    // Find the source connected to in-1 (the parameter input)
+    const paramInput = sourceResults.find(
+      (s) => s.edge.targetHandle === 'in-1'
+    );
+    if (paramInput) {
+      return `"${cleanParamCode(paramInput.result.code)}"`;
+    }
+    // Fallback to default if no input connected
+    return defaultValue;
+  }
+
+  if (isSliderMode) {
+    return `signal(() => window.__zyklusSliders?.['${nodeId}'] ?? ${defaultValue})`;
+  }
+
+  return defaultValue;
+}
+
+/**
  * Build code string for a node
  */
 function buildCode(
@@ -290,6 +340,33 @@ function buildCode(
       };
     }
 
+    case 'struct': {
+      const patternInput = sourceResults.find(
+        (s) => s.edge.targetHandle === 'in-0'
+      );
+      const structInput = sourceResults.find(
+        (s) => s.edge.targetHandle === 'in-1'
+      );
+      if (!patternInput || !structInput)
+        return { code: '', sourceType: '', dataNodes: [] };
+      // Include dataNodes from both inputs for proper triggering
+      const combinedDataNodes = [
+        ...patternInput.result.dataNodes,
+        ...structInput.result.dataNodes,
+      ];
+      const trigger = makeTrigger(
+        node.id,
+        'struct',
+        combinedDataNodes,
+        includeTriggers
+      );
+      return {
+        code: `${patternInput.result.code}.struct(${structInput.result.code})${trigger}`,
+        sourceType: 'struct',
+        dataNodes: [],
+      };
+    }
+
     // === TRANSFORM NODES ===
 
     case 'fast': {
@@ -301,8 +378,13 @@ function buildCode(
         allDataNodes,
         includeTriggers
       );
+      const fastValue = getParamValue(
+        node.id,
+        node.data.value ?? 2,
+        sourceResults
+      );
       return {
-        code: `${sourceResults[0].result.code}.fast(${node.data.value})${trigger}`,
+        code: `${sourceResults[0].result.code}.fast(${fastValue})${trigger}`,
         sourceType: inheritedSourceType,
         dataNodes: [],
       };
@@ -317,10 +399,11 @@ function buildCode(
         allDataNodes,
         includeTriggers
       );
-      const isSliderMode = window.__zyklusSliderModes?.[node.id] ?? false;
-      const slowValue = isSliderMode
-        ? `signal(() => window.__zyklusSliders?.['${node.id}'] ?? ${node.data.value ?? 2})`
-        : (node.data.value ?? 2);
+      const slowValue = getParamValue(
+        node.id,
+        node.data.value ?? 2,
+        sourceResults
+      );
       return {
         code: `${sourceResults[0].result.code}.slow(${slowValue})${trigger}`,
         sourceType: inheritedSourceType,
@@ -369,8 +452,13 @@ function buildCode(
         allDataNodes,
         includeTriggers
       );
+      const gainValue = getParamValue(
+        node.id,
+        node.data.value ?? 0.8,
+        sourceResults
+      );
       return {
-        code: `${sourceResults[0].result.code}.gain(${node.data.value})${trigger}`,
+        code: `${sourceResults[0].result.code}.gain(${gainValue})${trigger}`,
         sourceType: inheritedSourceType,
         dataNodes: [],
       };
@@ -385,8 +473,13 @@ function buildCode(
         allDataNodes,
         includeTriggers
       );
+      const reverbValue = getParamValue(
+        node.id,
+        node.data.value ?? 0.5,
+        sourceResults
+      );
       return {
-        code: `${sourceResults[0].result.code}.room(${node.data.value})${trigger}`,
+        code: `${sourceResults[0].result.code}.room(${reverbValue})${trigger}`,
         sourceType: inheritedSourceType,
         dataNodes: [],
       };
@@ -401,8 +494,13 @@ function buildCode(
         allDataNodes,
         includeTriggers
       );
+      const delayValue = getParamValue(
+        node.id,
+        node.data.value ?? 0.5,
+        sourceResults
+      );
       return {
-        code: `${sourceResults[0].result.code}.delay(${node.data.value})${trigger}`,
+        code: `${sourceResults[0].result.code}.delay(${delayValue})${trigger}`,
         sourceType: inheritedSourceType,
         dataNodes: [],
       };
@@ -417,11 +515,11 @@ function buildCode(
         allDataNodes,
         includeTriggers
       );
-      // Use signal for real-time control only if slider mode is enabled
-      const isSliderMode = window.__zyklusSliderModes?.[node.id] ?? false;
-      const freqValue = isSliderMode
-        ? `signal(() => window.__zyklusSliders?.['${node.id}'] ?? ${node.data.value ?? 1000})`
-        : (node.data.value ?? 1000);
+      const freqValue = getParamValue(
+        node.id,
+        node.data.value ?? 1000,
+        sourceResults
+      );
       return {
         code: `${sourceResults[0].result.code}.lpf(${freqValue})${trigger}`,
         sourceType: inheritedSourceType,
@@ -438,13 +536,160 @@ function buildCode(
         allDataNodes,
         includeTriggers
       );
-      // Use signal for real-time control only if slider mode is enabled
-      const isSliderMode = window.__zyklusSliderModes?.[node.id] ?? false;
-      const envValue = isSliderMode
-        ? `signal(() => window.__zyklusSliders?.['${node.id}'] ?? ${node.data.value ?? 4})`
-        : (node.data.value ?? 4);
+      const envValue = getParamValue(
+        node.id,
+        node.data.value ?? 4,
+        sourceResults
+      );
       return {
         code: `${sourceResults[0].result.code}.lpenv(${envValue})${trigger}`,
+        sourceType: inheritedSourceType,
+        dataNodes: [],
+      };
+    }
+
+    case 'room': {
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'room',
+        allDataNodes,
+        includeTriggers
+      );
+      const roomValue = getParamValue(
+        node.id,
+        node.data.value ?? 0.5,
+        sourceResults
+      );
+      return {
+        code: `${sourceResults[0].result.code}.room(${roomValue})${trigger}`,
+        sourceType: inheritedSourceType,
+        dataNodes: [],
+      };
+    }
+
+    case 'attack': {
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'attack',
+        allDataNodes,
+        includeTriggers
+      );
+      const attackValue = getParamValue(
+        node.id,
+        node.data.value ?? 0.01,
+        sourceResults
+      );
+      return {
+        code: `${sourceResults[0].result.code}.attack(${attackValue})${trigger}`,
+        sourceType: inheritedSourceType,
+        dataNodes: [],
+      };
+    }
+
+    case 'sustain': {
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'sustain',
+        allDataNodes,
+        includeTriggers
+      );
+      const sustainValue = getParamValue(
+        node.id,
+        node.data.value ?? 0.5,
+        sourceResults
+      );
+      return {
+        code: `${sourceResults[0].result.code}.sustain(${sustainValue})${trigger}`,
+        sourceType: inheritedSourceType,
+        dataNodes: [],
+      };
+    }
+
+    case 'release': {
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'release',
+        allDataNodes,
+        includeTriggers
+      );
+      const releaseValue = getParamValue(
+        node.id,
+        node.data.value ?? 0.1,
+        sourceResults
+      );
+      return {
+        code: `${sourceResults[0].result.code}.release(${releaseValue})${trigger}`,
+        sourceType: inheritedSourceType,
+        dataNodes: [],
+      };
+    }
+
+    case 'postgain': {
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'postgain',
+        allDataNodes,
+        includeTriggers
+      );
+      const postgainValue = getParamValue(
+        node.id,
+        node.data.value ?? 0.8,
+        sourceResults
+      );
+      return {
+        code: `${sourceResults[0].result.code}.postgain(${postgainValue})${trigger}`,
+        sourceType: inheritedSourceType,
+        dataNodes: [],
+      };
+    }
+
+    case 'pcurve': {
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'pcurve',
+        allDataNodes,
+        includeTriggers
+      );
+      const pcurveValue = getParamValue(
+        node.id,
+        node.data.value ?? 2,
+        sourceResults
+      );
+      return {
+        code: `${sourceResults[0].result.code}.pcurve(${pcurveValue})${trigger}`,
+        sourceType: inheritedSourceType,
+        dataNodes: [],
+      };
+    }
+
+    case 'pdecay': {
+      if (sourceResults.length === 0)
+        return { code: '', sourceType: '', dataNodes: [] };
+      const trigger = makeTrigger(
+        node.id,
+        'pdecay',
+        allDataNodes,
+        includeTriggers
+      );
+      const pdecayValue = getParamValue(
+        node.id,
+        node.data.value ?? 0.1,
+        sourceResults
+      );
+      return {
+        code: `${sourceResults[0].result.code}.pdecay(${pdecayValue})${trigger}`,
         sourceType: inheritedSourceType,
         dataNodes: [],
       };

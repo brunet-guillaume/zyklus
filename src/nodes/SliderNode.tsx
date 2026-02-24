@@ -8,6 +8,7 @@ declare global {
   interface Window {
     __zyklusSliders?: Record<string, number>;
     __zyklusSliderModes?: Record<string, boolean>;
+    __zyklusInputModes?: Record<string, boolean>;
   }
 }
 

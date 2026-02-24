@@ -1,19 +1,19 @@
-import { useReactFlow, useEdges, type NodeProps } from '@xyflow/react';
+import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
-import type { FastNode as FastNodeType } from './types';
+import type { AttackNode as AttackNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
 import { useEvents } from '../hooks/useEvents';
 
-export function FastNode({ id, data, selected }: NodeProps<FastNodeType>) {
+export function AttackNode({ id, data, selected }: NodeProps<AttackNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
   const { isTriggered: triggered } = useTrigger(id);
   const events = useEvents();
 
-  const value = data.value ?? 2;
-  const min = data.min ?? 0.1;
-  const max = data.max ?? 8;
-  const step = data.step ?? 0.5;
+  const value = data.value ?? 0.01;
+  const min = data.min ?? 0;
+  const max = data.max ?? 1;
+  const step = data.step ?? 0.01;
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -29,10 +29,10 @@ export function FastNode({ id, data, selected }: NodeProps<FastNodeType>) {
 
   return (
     <BaseNode
-      type="fast"
+      type="attack"
       nodeId={id}
       events={events}
-      label="Fast"
+      label="Attack"
       inputs={1}
       outputs={1}
       selected={selected}

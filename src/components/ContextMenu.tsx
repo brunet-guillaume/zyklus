@@ -29,6 +29,7 @@ const NODE_CATEGORIES = [
     nodes: [
       { type: 'array', label: 'Array' },
       { type: 'pick', label: 'Pick' },
+      { type: 'struct', label: 'Struct' },
     ],
   },
   {
@@ -47,6 +48,13 @@ const NODE_CATEGORIES = [
       { type: 'delay', label: 'Delay' },
       { type: 'lpf', label: 'Low-pass' },
       { type: 'lpenv', label: 'LP Env' },
+      { type: 'room', label: 'Room' },
+      { type: 'attack', label: 'Attack' },
+      { type: 'sustain', label: 'Sustain' },
+      { type: 'release', label: 'Release' },
+      { type: 'postgain', label: 'Postgain' },
+      { type: 'pcurve', label: 'Pcurve' },
+      { type: 'pdecay', label: 'Pdecay' },
     ],
   },
   {

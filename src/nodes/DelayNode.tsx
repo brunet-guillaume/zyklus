@@ -10,6 +10,11 @@ export function DelayNode({ id, data, selected }: NodeProps<DelayNodeType>) {
   const { isTriggered: triggered } = useTrigger(id);
   const events = useEvents();
 
+  const value = data.value ?? 0.5;
+  const min = data.min ?? 0;
+  const max = data.max ?? 1;
+  const step = data.step ?? 0.1;
+
   const inputErrorFn = (index: number) => {
     return !edges.some(
       (e) => e.target === id && e.targetHandle === `in-${index}`
@@ -34,20 +39,23 @@ export function DelayNode({ id, data, selected }: NodeProps<DelayNodeType>) {
       triggered={triggered}
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
-    >
-      <div className="auto-width-input">
-        <span>{data.value ?? ' '}</span>
-        <input
-          type="number"
-          value={data.value ?? 0.5}
-          onChange={(e) =>
-            updateNodeData(id, { value: parseFloat(e.target.value) || 0 })
-          }
-          step="0.1"
-          min="0"
-          max="1"
-        />
-      </div>
-    </BaseNode>
+      className="w-46"
+      slider={{
+        value,
+        min,
+        max,
+        step,
+        onChange: (v) => updateNodeData(id, { value: v }),
+        onMinChange: (v) => updateNodeData(id, { min: v }),
+        onMaxChange: (v) => updateNodeData(id, { max: v }),
+        onStepChange: (v) => updateNodeData(id, { step: v }),
+      }}
+      isSliderMode={data.isSlider ?? true}
+      onSliderModeChange={(isSlider) => updateNodeData(id, { isSlider })}
+      isInputMode={data.isInput ?? false}
+      onInputModeChange={(isInput) => updateNodeData(id, { isInput })}
+      expanded={data.expanded ?? false}
+      onExpandedChange={(expanded) => updateNodeData(id, { expanded })}
+    />
   );
 }

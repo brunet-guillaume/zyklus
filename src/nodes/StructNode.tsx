@@ -1,10 +1,10 @@
 import { useEdges, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
-import type { RevNode as RevNodeType } from './types';
+import type { StructNode as StructNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
 import { useEvents } from '../hooks/useEvents';
 
-export function RevNode({ id, selected }: NodeProps<RevNodeType>) {
+export function StructNode({ id, selected }: NodeProps<StructNodeType>) {
   const edges = useEdges();
   const { isTriggered: triggered } = useTrigger(id);
   const events = useEvents();
@@ -23,17 +23,17 @@ export function RevNode({ id, selected }: NodeProps<RevNodeType>) {
 
   return (
     <BaseNode
-      type="rev"
+      type="struct"
       nodeId={id}
-      modeOutput
       events={events}
-      label="Rev"
-      inputs={1}
+      label="Struct"
+      inputs={2}
       outputs={1}
       selected={selected}
       triggered={triggered}
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
+      inputLabels={['pattern', 'struct']}
     />
   );
 }

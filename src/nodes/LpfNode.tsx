@@ -52,6 +52,8 @@ export function LpfNode({ id, data, selected }: NodeProps<LpfNodeType>) {
       }}
       isSliderMode={data.isSlider ?? false}
       onSliderModeChange={(isSlider) => updateNodeData(id, { isSlider })}
+      isInputMode={data.isInput ?? false}
+      onInputModeChange={(isInput) => updateNodeData(id, { isInput })}
       expanded={data.expanded ?? false}
       onExpandedChange={(expanded) => updateNodeData(id, { expanded })}
     />
