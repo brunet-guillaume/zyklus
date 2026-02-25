@@ -21,6 +21,7 @@ declare global {
     __zyklusCpm?: number;
     __zyklusValueStarts?: ValueStartMap;
     __zyklusCompiledCode?: string;
+    __zyklusVars?: Record<string, unknown>;
   }
 }
 
@@ -31,13 +32,15 @@ export interface CompileResult {
 }
 
 /**
- * Build global statements from standalone nodes (CPM, etc.)
+ * Build global statements from standalone nodes (CPM, setVar, etc.)
  */
-function buildGlobalStatements(nodes: AppNode[]): string[] {
+function buildGlobalStatements(nodes: AppNode[], edges: Edge[]): string[] {
   const statements: string[] = [];
 
   for (const node of nodes) {
     const def = getNodeDefinition(node.type);
+
+    // Handle global nodes (like setCpm)
     if (def?.compile.type === 'global') {
       const { method } = def.compile;
       const defaultValue = def.slider?.value ?? 1;
@@ -59,6 +62,27 @@ function buildGlobalStatements(nodes: AppNode[]): string[] {
         window.__zyklusCpm = currentValue;
       }
     }
+
+    // Handle setVar nodes
+    if (node.type === 'setVar') {
+      const varName = (node.data as { name?: string }).name || 'unnamed';
+
+      // Find the input connected to this setVar node
+      const inputEdge = edges.find(
+        (e) => e.target === node.id && e.targetHandle === 'in-0'
+      );
+
+      if (inputEdge) {
+        // Build code from the source node
+        const sourceResult = buildCode(inputEdge.source, nodes, edges, false);
+        if (sourceResult.code) {
+          // Use assignment expression (not const) for comma operator compatibility
+          statements.push(
+            `(window.__zyklusVars = window.__zyklusVars || {}, window.__zyklusVars['${varName}'] = ${sourceResult.code})`
+          );
+        }
+      }
+    }
   }
 
   return statements;
@@ -74,8 +98,8 @@ export function compileGraph(nodes: AppNode[], edges: Edge[]): CompileResult {
   if (outputNodes.length === 0)
     return { code: '', cleanCode: '', eventCount: 0 };
 
-  // Build global statements (CPM, etc.) - always use static values
-  const globalStatements = buildGlobalStatements(nodes);
+  // Build global statements (CPM, setVar, etc.) - always use static values
+  const globalStatements = buildGlobalStatements(nodes, edges);
 
   // Build code for each output (with triggers)
   const codes = outputNodes
@@ -101,11 +125,10 @@ export function compileGraph(nodes: AppNode[], edges: Edge[]): CompileResult {
   let cleanCode = [...globalStatements, cleanPatternCode].join(', ');
 
   // Extract ValueNode positions from markers and remove them
-  console.log('[Compiler] Code with markers:', code);
   const valueStarts = extractValueStarts(code);
-  console.log('[Compiler] ValueStarts:', Object.fromEntries(valueStarts));
   code = removeValueMarkers(code);
   cleanCode = removeValueMarkers(cleanCode);
+  console.log('[Compiler] Clean code:', cleanCode);
   console.log('[Compiler] Code without markers:', code);
 
   window.__zyklusValueStarts = valueStarts;
@@ -420,6 +443,34 @@ function buildCode(
         code: `${patternInput.result.code}.struct(${structInput.result.code})`,
         sourceType: 'struct',
         dataNodes: combinedDataNodes,
+      };
+    }
+
+    case 'setVar': {
+      // setVar is handled in buildGlobalStatements, no output
+      return { code: '', sourceType: '', dataNodes: [] };
+    }
+
+    case 'getVar': {
+      const varName = (node.data as { name?: string }).name || 'unnamed';
+      // Generate code that retrieves the value from global storage
+      return {
+        code: `window.__zyklusVars?.['${varName}']`,
+        sourceType: 'var',
+        dataNodes: [],
+      };
+    }
+
+    case 'bank': {
+      const mainInput = sourceResults.find(
+        (s) => s.edge.targetHandle === 'in-0'
+      );
+      if (!mainInput) return { code: '', sourceType: '', dataNodes: [] };
+      const bankName = (node.data as { bank?: string }).bank || 'RolandTR808';
+      return {
+        code: `${mainInput.result.code}.bank("${bankName}")`,
+        sourceType: mainInput.result.sourceType,
+        dataNodes: allDataNodes,
       };
     }
 

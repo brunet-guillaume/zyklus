@@ -1,20 +1,21 @@
 import { useEffect } from 'react';
 import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
+import { useTrigger } from '../hooks/useTrigger';
+import { useEvents } from '../hooks/useEvents';
 import type { SliderNode as SliderNodeType } from './types';
 
-// Extend window type for slider values and modes
 declare global {
   interface Window {
     __zyklusSliders?: Record<string, number>;
-    __zyklusSliderModes?: Record<string, boolean>;
-    __zyklusInputModes?: Record<string, boolean>;
   }
 }
 
 export function SliderNode({ id, data, selected }: NodeProps<SliderNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
+  const { isTriggered } = useTrigger(id);
+  const events = useEvents();
 
   const outputErrorFn = (index: number) => {
     return !edges.some(
@@ -23,7 +24,8 @@ export function SliderNode({ id, data, selected }: NodeProps<SliderNodeType>) {
   };
 
   const min = data.min ?? 0;
-  const max = data.max ?? 1000;
+  const max = data.max ?? 100;
+  const step = data.step ?? 1;
   const value = data.value ?? (min + max) / 2;
 
   // Sync slider value to global variable for real-time Strudel access
@@ -35,7 +37,6 @@ export function SliderNode({ id, data, selected }: NodeProps<SliderNodeType>) {
   }, [id, value]);
 
   const handleChange = (v: number) => {
-    // Update both React state and global variable
     updateNodeData(id, { value: v });
     if (!window.__zyklusSliders) {
       window.__zyklusSliders = {};
@@ -48,17 +49,27 @@ export function SliderNode({ id, data, selected }: NodeProps<SliderNodeType>) {
       type="slider"
       nodeId={id}
       label="Slider"
+      events={events}
       inputs={0}
       outputs={1}
       selected={selected}
+      triggered={isTriggered}
       outputErrorFn={outputErrorFn}
+      className="w-46"
       slider={{
         min,
         max,
+        step,
         value,
-        step: data.step ?? 1,
         onChange: handleChange,
+        onMinChange: (v) => updateNodeData(id, { min: v }),
+        onMaxChange: (v) => updateNodeData(id, { max: v }),
+        onStepChange: (v) => updateNodeData(id, { step: v }),
       }}
+      isSliderMode={true}
+      sliderOnly={true}
+      expanded={data.expanded ?? false}
+      onExpandedChange={(expanded) => updateNodeData(id, { expanded })}
     />
   );
 }

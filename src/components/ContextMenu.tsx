@@ -22,6 +22,7 @@ const NODE_CATEGORIES = [
       { type: 'sound', label: 'Sound' },
       { type: 'note', label: 'Note' },
       { type: 'supersaw', label: 'Supersaw' },
+      { type: 'bank', label: 'Bank' },
     ],
   },
   {
@@ -64,6 +65,13 @@ const NODE_CATEGORIES = [
   {
     label: 'Global',
     nodes: [{ type: 'cpm', label: 'CPM (Tempo)' }],
+  },
+  {
+    label: 'Variables',
+    nodes: [
+      { type: 'setVar', label: 'Set Var' },
+      { type: 'getVar', label: 'Get Var' },
+    ],
   },
 ];
 

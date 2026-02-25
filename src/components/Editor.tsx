@@ -15,6 +15,13 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes, type AppNode } from '../nodes';
+
+declare global {
+  interface Window {
+    __zyklusEdges?: Edge[];
+    __zyklusNodes?: AppNode[];
+  }
+}
 import {
   compileGraph,
   initAudio,
@@ -25,7 +32,6 @@ import {
 import { ContextMenu } from './ContextMenu';
 import { NodePalette } from './NodePalette';
 import { GradientEdge } from './GradientEdge';
-import { DebugCodeView } from './DebugCodeView';
 import defaultCanvas from '../default-canvas.json';
 
 const edgeTypes = {
@@ -106,6 +112,12 @@ function getDefaultData(type: string) {
       return { value: 0.1 };
     case 'output':
       return { isPlaying: false };
+    case 'setVar':
+      return { name: '' };
+    case 'getVar':
+      return { name: '' };
+    case 'bank':
+      return { bank: 'RolandTR808' };
     default:
       return {};
   }
@@ -136,6 +148,12 @@ function EditorContent() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }));
   }, [nodes, edges]);
 
+  // Expose edges and nodes globally for trigger propagation
+  useEffect(() => {
+    window.__zyklusEdges = edges;
+    window.__zyklusNodes = nodes;
+  }, [edges, nodes]);
+
   // Track mouse position
   const mousePos = useRef({ x: 0, y: 0 });
 
@@ -150,10 +168,11 @@ function EditorContent() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input/textarea
+      // Ignore if typing in an input/textarea/contentEditable
       if (
         e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
       ) {
         return;
       }
@@ -443,8 +462,6 @@ function EditorContent() {
           onClose={() => setPalette(null)}
         />
       )}
-
-      <DebugCodeView />
     </div>
   );
 }

@@ -32,6 +32,9 @@
   --pdecay: #0891b2;
   --output: #fb923c;
   --cpm: #f97316;
+  --setVar: #8b5cf6;
+  --getVar: #a78bfa;
+  --bank: #f472b6;
 }
 
 html,
@@ -186,6 +189,15 @@ body {
 .cpm {
   --node-color: var(--cpm);
 }
+.setVar {
+  --node-color: var(--setVar);
+}
+.getVar {
+  --node-color: var(--getVar);
+}
+.bank {
+  --node-color: var(--bank);
+}
 
 /* Generic node styles using --node-color */
 .node {
@@ -276,7 +288,7 @@ input[type='number'] {
 
 .auto-width-input > .editable mark {
   @apply px-1 -mx-1 py-0.5 rounded-sm;
-  animation: highlight-fade var(--duration, 1000ms) ease-out forwards;
+  animation: highlight-fade var(--duration, 150ms) ease-out forwards;
 }
 
 @keyframes highlight-fade {

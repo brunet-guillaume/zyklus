@@ -6,6 +6,8 @@ import { SliderNode } from './SliderNode';
 import { ValueNode } from './ValueNode';
 import { ArrayNode } from './ArrayNode';
 import { CodeNode } from './CodeNode';
+import { SetVarNode, GetVarNode } from './VarNodes';
+import { BankNode } from './BankNode';
 
 export const nodeTypes: NodeTypes = {
   // Generated nodes from definitions
@@ -16,6 +18,9 @@ export const nodeTypes: NodeTypes = {
   value: ValueNode,
   array: ArrayNode,
   code: CodeNode,
+  setVar: SetVarNode,
+  getVar: GetVarNode,
+  bank: BankNode,
 };
 
 export * from './types';

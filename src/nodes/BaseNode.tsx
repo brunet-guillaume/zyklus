@@ -43,6 +43,7 @@ interface BaseNodeProps {
   onInputModeChange?: (isInput: boolean) => void; // Callback when input mode changes
   expanded?: boolean; // Whether tools panel is expanded (persisted)
   onExpandedChange?: (expanded: boolean) => void; // Callback when expanded changes
+  sliderOnly?: boolean; // Hide mode switcher, show only slider options
   className?: string; // Additional CSS classes
 }
 
@@ -71,6 +72,7 @@ export function BaseNode({
   onInputModeChange,
   expanded: expandedProp = false,
   onExpandedChange,
+  sliderOnly = false,
   className = '',
 }: BaseNodeProps) {
   const handleSpacing = 20;
@@ -265,11 +267,7 @@ export function BaseNode({
         </div>
       )}
 
-      {label && (
-        <div className="title">
-          {label} - {nodeId}
-        </div>
-      )}
+      {label && <div className="title">{label}</div>}
 
       {/* Optional slider or input based on mode */}
       {slider && isSlider && !isInput && (
@@ -341,41 +339,43 @@ export function BaseNode({
 
       {expanded && (
         <div className="tools">
-          <div className="flex w-full text-center gap-1 bg-white/3 p-1 rounded-md">
-            <div
-              className={`flex-1 transition-colors ${!isSlider && !isInput ? 'bg-black/50 hover:bg-black/75' : 'bg-black/0 hover:bg-black/15'} rounded`}
-              onClick={() => {
-                setIsSlider(false);
-                setIsInput(false);
-                onSliderModeChange?.(false);
-                onInputModeChange?.(false);
-              }}
-            >
-              Value
+          {!sliderOnly && (
+            <div className="flex w-full text-center gap-1 bg-white/3 p-1 rounded-md">
+              <div
+                className={`flex-1 transition-colors ${!isSlider && !isInput ? 'bg-black/50 hover:bg-black/75' : 'bg-black/0 hover:bg-black/15'} rounded`}
+                onClick={() => {
+                  setIsSlider(false);
+                  setIsInput(false);
+                  onSliderModeChange?.(false);
+                  onInputModeChange?.(false);
+                }}
+              >
+                Value
+              </div>
+              <div
+                className={`flex-1 transition-colors ${isSlider && !isInput ? 'bg-black/50 hover:bg-black/75' : 'bg-black/0 hover:bg-black/15'} rounded`}
+                onClick={() => {
+                  setIsSlider(true);
+                  setIsInput(false);
+                  onSliderModeChange?.(true);
+                  onInputModeChange?.(false);
+                }}
+              >
+                Slider
+              </div>
+              <div
+                className={`flex-1 transition-colors ${isInput ? 'bg-black/50 hover:bg-black/75' : 'bg-black/0 hover:bg-black/15'} rounded`}
+                onClick={() => {
+                  setIsSlider(false);
+                  setIsInput(true);
+                  onSliderModeChange?.(false);
+                  onInputModeChange?.(true);
+                }}
+              >
+                Input
+              </div>
             </div>
-            <div
-              className={`flex-1 transition-colors ${isSlider && !isInput ? 'bg-black/50 hover:bg-black/75' : 'bg-black/0 hover:bg-black/15'} rounded`}
-              onClick={() => {
-                setIsSlider(true);
-                setIsInput(false);
-                onSliderModeChange?.(true);
-                onInputModeChange?.(false);
-              }}
-            >
-              Slider
-            </div>
-            <div
-              className={`flex-1 transition-colors ${isInput ? 'bg-black/50 hover:bg-black/75' : 'bg-black/0 hover:bg-black/15'} rounded`}
-              onClick={() => {
-                setIsSlider(false);
-                setIsInput(true);
-                onSliderModeChange?.(false);
-                onInputModeChange?.(true);
-              }}
-            >
-              Input
-            </div>
-          </div>
+          )}
           {slider && (
             <div className="flex gap-2 mt-1 text-xs text-center w-full bg-white/3 rounded-md p-1">
               <label className="flex flex-col gap-0.5 flex-1">
@@ -400,7 +400,7 @@ export function BaseNode({
                   className="w-full bg-black/30 rounded px-1 py-0.5 text-center"
                 />
               </label>
-              {isSlider && (
+              {(isSlider || sliderOnly) && (
                 <label className="flex flex-col gap-0.5 flex-1">
                   <span className="opacity-50">Step</span>
                   <input

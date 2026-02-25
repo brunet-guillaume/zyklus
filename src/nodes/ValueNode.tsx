@@ -84,6 +84,14 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
   const editableRef = useRef<HTMLDivElement>(null);
   const lastValueRef = useRef(data.value);
 
+  // Initialize content on mount
+  useEffect(() => {
+    if (editableRef.current) {
+      editableRef.current.innerHTML = htmlContent;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Update content when highlights change (but not when user is typing)
   useEffect(() => {
     if (editableRef.current && document.activeElement !== editableRef.current) {
@@ -129,7 +137,6 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
           contentEditable
           onInput={handleInput}
           className="input editable outline-none whitespace-pre"
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
         />
       </div>
     </BaseNode>

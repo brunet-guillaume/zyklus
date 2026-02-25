@@ -12,6 +12,7 @@ const NODE_OPTIONS = [
   { type: 'slow', label: 'Slow' },
   { type: 'rev', label: 'Rev' },
   { type: 'supersaw', label: 'Supersaw' },
+  { type: 'bank', label: 'Bank' },
   { type: 'slider', label: 'Slider' },
   { type: 'gain', label: 'Gain' },
   { type: 'postgain', label: 'Postgain' },
@@ -26,6 +27,9 @@ const NODE_OPTIONS = [
   { type: 'pcurve', label: 'Pcurve' },
   { type: 'pdecay', label: 'Pdecay' },
   { type: 'output', label: 'Output' },
+  { type: 'cpm', label: 'CPM' },
+  { type: 'setVar', label: 'Set Var' },
+  { type: 'getVar', label: 'Get Var' },
 ];
 
 interface NodePaletteProps {

@@ -45,6 +45,17 @@ export type StandaloneSliderNodeData = {
   max?: number;
   value?: number;
   step?: number;
+  expanded?: boolean;
+};
+
+// Variable nodes
+export type VarNodeData = {
+  name: string;
+};
+
+// Bank node
+export type BankNodeData = {
+  bank: string;
 };
 
 // === Node type definitions ===
@@ -83,6 +94,13 @@ export type CodeNode = Node<CodeNodeData, 'code'>;
 // Global nodes (standalone)
 export type CpmNode = Node<SliderNodeData, 'cpm'>;
 
+// Variable nodes
+export type SetVarNode = Node<VarNodeData, 'setVar'>;
+export type GetVarNode = Node<VarNodeData, 'getVar'>;
+
+// Bank node
+export type BankNode = Node<BankNodeData, 'bank'>;
+
 // === Union type for all nodes ===
 
 export type AppNode =
@@ -115,7 +133,12 @@ export type AppNode =
   | ArrayNode
   | CodeNode
   // Global nodes
-  | CpmNode;
+  | CpmNode
+  // Variable nodes
+  | SetVarNode
+  | GetVarNode
+  // Bank node
+  | BankNode;
 
 // === Legacy exports for backwards compatibility ===
 // (can be removed once all code is migrated)

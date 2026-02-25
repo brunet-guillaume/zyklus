@@ -312,6 +312,28 @@ export const nodeDefinitions = {
     },
     compile: { type: 'global', method: 'setCpm' } as const,
   },
+
+  // === Bank node ===
+  bank: {
+    label: 'Bank',
+    inputs: 1,
+    outputs: 1,
+    compile: { type: 'custom' } as const,
+  },
+
+  // === Variable nodes ===
+  setVar: {
+    label: 'Set',
+    inputs: 1,
+    outputs: 0,
+    compile: { type: 'custom' } as const,
+  },
+  getVar: {
+    label: 'Get',
+    inputs: 0,
+    outputs: 1,
+    compile: { type: 'custom' } as const,
+  },
 } as const satisfies Record<string, NodeDefinition>;
 
 export type NodeType = keyof typeof nodeDefinitions;
