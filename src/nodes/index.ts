@@ -8,6 +8,8 @@ import { ArrayNode } from './ArrayNode';
 import { CodeNode } from './CodeNode';
 import { SetVarNode, GetVarNode } from './VarNodes';
 import { BankNode } from './BankNode';
+import { ScaleNode } from './ScaleNode';
+import { DistortNode } from './DistortNode';
 
 export const nodeTypes: NodeTypes = {
   // Generated nodes from definitions
@@ -21,6 +23,8 @@ export const nodeTypes: NodeTypes = {
   setVar: SetVarNode,
   getVar: GetVarNode,
   bank: BankNode,
+  scale: ScaleNode,
+  distort: DistortNode,
 };
 
 export * from './types';

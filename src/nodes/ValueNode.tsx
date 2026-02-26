@@ -28,7 +28,12 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
     if (!isTriggered || activeEvents.length === 0) return [];
 
     const value = data.value || '';
-    const ranges: Array<{ start: number; end: number; duration: number }> = [];
+    const ranges: Array<{
+      start: number;
+      end: number;
+      duration: number;
+      triggeredAt: number;
+    }> = [];
 
     for (const event of activeEvents) {
       if (!event.location) continue;
@@ -36,18 +41,29 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
       const { start, end } = event.location;
       // Validate bounds
       if (start >= 0 && end <= value.length && start < end) {
-        ranges.push({ start, end, duration: event.duration });
+        ranges.push({
+          start,
+          end,
+          duration: event.duration,
+          triggeredAt: event.triggeredAt,
+        });
       }
     }
 
     // Sort by start position and merge overlapping ranges
     ranges.sort((a, b) => a.start - b.start);
-    const merged: Array<{ start: number; end: number; duration: number }> = [];
+    const merged: Array<{
+      start: number;
+      end: number;
+      duration: number;
+      triggeredAt: number;
+    }> = [];
     for (const range of ranges) {
       const last = merged[merged.length - 1];
       if (last && range.start <= last.end) {
         last.end = Math.max(last.end, range.end);
         last.duration = Math.max(last.duration, range.duration);
+        last.triggeredAt = Math.max(last.triggeredAt, range.triggeredAt);
       } else {
         merged.push({ ...range });
       }
@@ -70,7 +86,7 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
       if (range.start > pos) {
         result += value.slice(pos, range.start);
       }
-      result += `<mark style="--duration: ${range.duration}ms">${value.slice(range.start, range.end)}</mark>`;
+      result += `<mark data-key="${range.triggeredAt}" style="--duration: ${range.duration}ms">${value.slice(range.start, range.end)}</mark>`;
       pos = range.end;
     }
 

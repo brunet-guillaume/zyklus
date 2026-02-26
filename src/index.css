@@ -13,6 +13,8 @@
   --array: #818cf8;
   --pick: #22d3ee;
   --struct: #14b8a6;
+  --ribbon: #f43f5e;
+  --distort: #dc2626;
   --fast: #60a5fa;
   --slow: #a78bfa;
   --rev: #f472b6;
@@ -23,6 +25,10 @@
   --delay: #16a34a;
   --lpf: #15803d;
   --lpenv: #166534;
+  --lpq: #047857;
+  --lpa: #0d9488;
+  --lps: #0891b2;
+  --lpr: #0e7490;
   --room: #059669;
   --attack: #f43f5e;
   --sustain: #ec4899;
@@ -35,6 +41,14 @@
   --setVar: #8b5cf6;
   --getVar: #a78bfa;
   --bank: #f472b6;
+  --irand: #06b6d4;
+  --sub: #14b8a6;
+  --seg: #8b5cf6;
+  --scale: #ec4899;
+  --orbit: #7c3aed;
+  --duckorbit: #6d28d9;
+  --duckattack: #5b21b6;
+  --duckdepth: #4c1d95;
 }
 
 html,
@@ -132,6 +146,12 @@ body {
 .struct {
   --node-color: var(--struct);
 }
+.ribbon {
+  --node-color: var(--ribbon);
+}
+.distort {
+  --node-color: var(--distort);
+}
 .fast {
   --node-color: var(--fast);
 }
@@ -161,6 +181,18 @@ body {
 }
 .lpenv {
   --node-color: var(--lpenv);
+}
+.lpq {
+  --node-color: var(--lpq);
+}
+.lpa {
+  --node-color: var(--lpa);
+}
+.lps {
+  --node-color: var(--lps);
+}
+.lpr {
+  --node-color: var(--lpr);
 }
 .room {
   --node-color: var(--room);
@@ -197,6 +229,30 @@ body {
 }
 .bank {
   --node-color: var(--bank);
+}
+.irand {
+  --node-color: var(--irand);
+}
+.sub {
+  --node-color: var(--sub);
+}
+.seg {
+  --node-color: var(--seg);
+}
+.scale {
+  --node-color: var(--scale);
+}
+.orbit {
+  --node-color: var(--orbit);
+}
+.duckorbit {
+  --node-color: var(--duckorbit);
+}
+.duckattack {
+  --node-color: var(--duckattack);
+}
+.duckdepth {
+  --node-color: var(--duckdepth);
 }
 
 /* Generic node styles using --node-color */

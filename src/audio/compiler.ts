@@ -446,6 +446,25 @@ function buildCode(
       };
     }
 
+    case 'ribbon': {
+      const patternInput = sourceResults.find(
+        (s) => s.edge.targetHandle === 'in-0'
+      );
+      const offsetInput = sourceResults.find(
+        (s) => s.edge.targetHandle === 'in-1'
+      );
+      const cyclesInput = sourceResults.find(
+        (s) => s.edge.targetHandle === 'in-2'
+      );
+      if (!patternInput || !offsetInput || !cyclesInput)
+        return { code: '', sourceType: '', dataNodes: [] };
+      return {
+        code: `${patternInput.result.code}.ribbon(${offsetInput.result.code}, ${cyclesInput.result.code})`,
+        sourceType: 'ribbon',
+        dataNodes: allDataNodes,
+      };
+    }
+
     case 'setVar': {
       // setVar is handled in buildGlobalStatements, no output
       return { code: '', sourceType: '', dataNodes: [] };
@@ -469,6 +488,57 @@ function buildCode(
       const bankName = (node.data as { bank?: string }).bank || 'RolandTR808';
       return {
         code: `${mainInput.result.code}.bank("${bankName}")`,
+        sourceType: mainInput.result.sourceType,
+        dataNodes: allDataNodes,
+      };
+    }
+
+    case 'irand': {
+      const value = (node.data as { value?: number }).value ?? 10;
+      return {
+        code: `irand(${value})`,
+        sourceType: 'irand',
+        dataNodes: [],
+      };
+    }
+
+    case 'scale': {
+      const mainInput = sourceResults.find(
+        (s) => s.edge.targetHandle === 'in-0'
+      );
+      if (!mainInput) return { code: '', sourceType: '', dataNodes: [] };
+      const scaleName = (node.data as { scale?: string }).scale || 'c:minor';
+      return {
+        code: `${mainInput.result.code}.scale("${scaleName}")`,
+        sourceType: mainInput.result.sourceType,
+        dataNodes: allDataNodes,
+      };
+    }
+
+    case 'distort': {
+      const mainInput = sourceResults.find(
+        (s) => s.edge.targetHandle === 'in-0'
+      );
+      if (!mainInput) return { code: '', sourceType: '', dataNodes: [] };
+      const distortData = node.data as {
+        amount?: number;
+        postgain?: number;
+        mode?: string;
+      };
+      const amount = distortData.amount ?? 2;
+      const postgain = distortData.postgain ?? 0.5;
+      const mode = distortData.mode || '';
+
+      // Build distort string: "amount:postgain:mode" or simpler variants
+      let distortArg: string;
+      if (mode) {
+        distortArg = `"${amount}:${postgain}:${mode}"`;
+      } else {
+        distortArg = `"${amount}:${postgain}"`;
+      }
+
+      return {
+        code: `${mainInput.result.code}.distort(${distortArg})`,
         sourceType: mainInput.result.sourceType,
         dataNodes: allDataNodes,
       };

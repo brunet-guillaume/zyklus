@@ -168,6 +168,62 @@ export const nodeDefinitions = {
     },
     compile: { type: 'transform', method: 'lpenv' } as const,
   },
+  lpq: {
+    label: 'LP Q',
+    inputs: 1,
+    outputs: 1,
+    className: 'w-46',
+    slider: {
+      value: 1,
+      min: 0,
+      max: 50,
+      step: 0.5,
+      defaultMode: 'value' as const,
+    },
+    compile: { type: 'transform', method: 'lpq' } as const,
+  },
+  lpa: {
+    label: 'LP Attack',
+    inputs: 1,
+    outputs: 1,
+    className: 'w-46',
+    slider: {
+      value: 0.01,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      defaultMode: 'value' as const,
+    },
+    compile: { type: 'transform', method: 'lpa' } as const,
+  },
+  lps: {
+    label: 'LP Sustain',
+    inputs: 1,
+    outputs: 1,
+    className: 'w-46',
+    slider: {
+      value: 0.5,
+      min: 0,
+      max: 1,
+      step: 0.05,
+      defaultMode: 'value' as const,
+    },
+    compile: { type: 'transform', method: 'lps' } as const,
+  },
+  lpr: {
+    label: 'LP Release',
+    inputs: 1,
+    outputs: 1,
+    className: 'w-46',
+    slider: {
+      value: 0.1,
+      min: 0,
+      max: 2,
+      step: 0.05,
+      defaultMode: 'value' as const,
+    },
+    compile: { type: 'transform', method: 'lpr' } as const,
+  },
   room: {
     label: 'Room',
     inputs: 1,
@@ -272,6 +328,13 @@ export const nodeDefinitions = {
   },
 
   // === Structural nodes ===
+  ribbon: {
+    label: 'Ribbon',
+    inputs: 3,
+    outputs: 1,
+    inputLabels: ['pattern', 'offset', 'cycles'],
+    compile: { type: 'custom' } as const,
+  },
   pick: {
     label: 'Pick',
     inputs: 2,
@@ -285,6 +348,72 @@ export const nodeDefinitions = {
     outputs: 1,
     inputLabels: ['pattern', 'struct'],
     compile: { type: 'custom' } as const,
+  },
+
+  // === Distortion ===
+  distort: {
+    label: 'Distort',
+    inputs: 1,
+    outputs: 1,
+    compile: { type: 'custom' } as const,
+  },
+
+  // === Routing nodes ===
+  orbit: {
+    label: 'Orbit',
+    inputs: 1,
+    outputs: 1,
+    className: 'w-46',
+    slider: {
+      value: 1,
+      min: 1,
+      max: 16,
+      step: 1,
+      defaultMode: 'value' as const,
+    },
+    compile: { type: 'transform', method: 'orbit' } as const,
+  },
+  duckorbit: {
+    label: 'Duck',
+    inputs: 1,
+    outputs: 1,
+    className: 'w-46',
+    slider: {
+      value: 1,
+      min: 1,
+      max: 16,
+      step: 1,
+      defaultMode: 'value' as const,
+    },
+    compile: { type: 'transform', method: 'duckorbit' } as const,
+  },
+  duckattack: {
+    label: 'Duck Att',
+    inputs: 1,
+    outputs: 1,
+    className: 'w-46',
+    slider: {
+      value: 0.2,
+      min: 0,
+      max: 2,
+      step: 0.01,
+      defaultMode: 'value' as const,
+    },
+    compile: { type: 'transform', method: 'duckattack' } as const,
+  },
+  duckdepth: {
+    label: 'Duck Depth',
+    inputs: 1,
+    outputs: 1,
+    className: 'w-46',
+    slider: {
+      value: 1,
+      min: 0,
+      max: 1,
+      step: 0.05,
+      defaultMode: 'value' as const,
+    },
+    compile: { type: 'transform', method: 'duckdepth' } as const,
   },
 
   // === Output node ===
@@ -318,6 +447,57 @@ export const nodeDefinitions = {
     label: 'Bank',
     inputs: 1,
     outputs: 1,
+    compile: { type: 'custom' } as const,
+  },
+
+  // === Pattern generator nodes ===
+  irand: {
+    label: 'Irand',
+    inputs: 0,
+    outputs: 1,
+    className: 'w-46',
+    slider: {
+      value: 10,
+      min: 1,
+      max: 100,
+      step: 1,
+      defaultMode: 'value' as const,
+    },
+    compile: { type: 'custom' } as const,
+  },
+  sub: {
+    label: 'Sub',
+    inputs: 1,
+    outputs: 1,
+    className: 'w-46',
+    slider: {
+      value: 0,
+      min: -100,
+      max: 100,
+      step: 1,
+      defaultMode: 'value' as const,
+    },
+    compile: { type: 'transform', method: 'sub' } as const,
+  },
+  seg: {
+    label: 'Seg',
+    inputs: 1,
+    outputs: 1,
+    className: 'w-46',
+    slider: {
+      value: 16,
+      min: 1,
+      max: 64,
+      step: 1,
+      defaultMode: 'value' as const,
+    },
+    compile: { type: 'transform', method: 'seg' } as const,
+  },
+  scale: {
+    label: 'Scale',
+    inputs: 1,
+    outputs: 1,
+    modeOutput: true,
     compile: { type: 'custom' } as const,
   },
 

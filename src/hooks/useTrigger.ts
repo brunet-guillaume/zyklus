@@ -13,6 +13,7 @@ export interface TriggerEvent {
   location?: { start: number; end: number };
   hap?: unknown;
   duration: number;
+  triggeredAt: number;
 }
 
 export interface TriggerState {
@@ -59,6 +60,7 @@ export function useTrigger(nodeId: string): TriggerState {
           location: customEvent.detail.location,
           hap: customEvent.detail.hap,
           duration,
+          triggeredAt: Date.now(),
         };
 
         // Create a unique key for this trigger (based on note, timing, and location)

@@ -58,6 +58,18 @@ export type BankNodeData = {
   bank: string;
 };
 
+// Scale node
+export type ScaleNodeData = {
+  scale: string;
+};
+
+// Distort node
+export type DistortNodeData = {
+  amount: number;
+  postgain: number;
+  mode: string;
+};
+
 // === Node type definitions ===
 
 // Simple nodes (no data)
@@ -67,6 +79,7 @@ export type RevNode = Node<SimpleNodeData, 'rev'>;
 export type SupersawNode = Node<SimpleNodeData, 'supersaw'>;
 export type StructNode = Node<SimpleNodeData, 'struct'>;
 export type PickNode = Node<SimpleNodeData, 'pick'>;
+export type RibbonNode = Node<SimpleNodeData, 'ribbon'>;
 
 // Slider nodes (all use SliderNodeData)
 export type FastNode = Node<SliderNodeData, 'fast'>;
@@ -76,6 +89,10 @@ export type ReverbNode = Node<SliderNodeData, 'reverb'>;
 export type DelayNode = Node<SliderNodeData, 'delay'>;
 export type LpfNode = Node<SliderNodeData, 'lpf'>;
 export type LpEnvNode = Node<SliderNodeData, 'lpenv'>;
+export type LpqNode = Node<SliderNodeData, 'lpq'>;
+export type LpaNode = Node<SliderNodeData, 'lpa'>;
+export type LpsNode = Node<SliderNodeData, 'lps'>;
+export type LprNode = Node<SliderNodeData, 'lpr'>;
 export type RoomNode = Node<SliderNodeData, 'room'>;
 export type AttackNode = Node<SliderNodeData, 'attack'>;
 export type SustainNode = Node<SliderNodeData, 'sustain'>;
@@ -83,6 +100,15 @@ export type ReleaseNode = Node<SliderNodeData, 'release'>;
 export type PostgainNode = Node<SliderNodeData, 'postgain'>;
 export type PcurveNode = Node<SliderNodeData, 'pcurve'>;
 export type PdecayNode = Node<SliderNodeData, 'pdecay'>;
+export type IrandNode = Node<SliderNodeData, 'irand'>;
+export type SubNode = Node<SliderNodeData, 'sub'>;
+export type SegNode = Node<SliderNodeData, 'seg'>;
+export type OrbitNode = Node<SliderNodeData, 'orbit'>;
+export type DuckorbitNode = Node<SliderNodeData, 'duckorbit'>;
+export type DuckattackNode = Node<SliderNodeData, 'duckattack'>;
+export type DuckdepthNode = Node<SliderNodeData, 'duckdepth'>;
+export type ScaleNode = Node<ScaleNodeData, 'scale'>;
+export type DistortNode = Node<DistortNodeData, 'distort'>;
 
 // Special nodes
 export type OutputNode = Node<OutputNodeData, 'output'>;
@@ -111,6 +137,7 @@ export type AppNode =
   | SupersawNode
   | StructNode
   | PickNode
+  | RibbonNode
   // Slider nodes
   | FastNode
   | SlowNode
@@ -119,6 +146,10 @@ export type AppNode =
   | DelayNode
   | LpfNode
   | LpEnvNode
+  | LpqNode
+  | LpaNode
+  | LpsNode
+  | LprNode
   | RoomNode
   | AttackNode
   | SustainNode
@@ -126,6 +157,15 @@ export type AppNode =
   | PostgainNode
   | PcurveNode
   | PdecayNode
+  | IrandNode
+  | SubNode
+  | SegNode
+  | ScaleNode
+  | DistortNode
+  | OrbitNode
+  | DuckorbitNode
+  | DuckattackNode
+  | DuckdepthNode
   // Special nodes
   | OutputNode
   | SliderNode
