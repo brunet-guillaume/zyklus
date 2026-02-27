@@ -34,6 +34,7 @@ export type CompilePattern =
 
 export interface NodeDefinition {
   label: string;
+  color: string;
   dataType: DataTypeKey;
   inputs: number;
   outputs: number;
@@ -48,6 +49,7 @@ export const nodeDefinitions = {
   // === Pattern/Source nodes ===
   sound: {
     label: 'Sound',
+    color: '#ffa577',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -55,6 +57,7 @@ export const nodeDefinitions = {
   },
   note: {
     label: 'Note',
+    color: '#71d7ca',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -66,6 +69,7 @@ export const nodeDefinitions = {
   // === Transform nodes ===
   fast: {
     label: 'Fast',
+    color: '#60a5fa',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -81,6 +85,7 @@ export const nodeDefinitions = {
   },
   slow: {
     label: 'Slow',
+    color: '#a78bfa',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -96,6 +101,7 @@ export const nodeDefinitions = {
   },
   rev: {
     label: 'Rev',
+    color: '#f472b6',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -106,6 +112,7 @@ export const nodeDefinitions = {
   // === Synth nodes ===
   supersaw: {
     label: 'Supersaw',
+    color: '#e879f9',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -121,6 +128,7 @@ export const nodeDefinitions = {
   // === Effect nodes ===
   gain: {
     label: 'Gain',
+    color: '#4ade80',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -136,6 +144,7 @@ export const nodeDefinitions = {
   },
   reverb: {
     label: 'Reverb',
+    color: '#22c55e',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -151,6 +160,7 @@ export const nodeDefinitions = {
   },
   delay: {
     label: 'Delay',
+    color: '#16a34a',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -166,6 +176,7 @@ export const nodeDefinitions = {
   },
   lpf: {
     label: 'Low-pass',
+    color: '#15803d',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -181,6 +192,7 @@ export const nodeDefinitions = {
   },
   lpenv: {
     label: 'LP Env',
+    color: '#166534',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -196,6 +208,7 @@ export const nodeDefinitions = {
   },
   lpq: {
     label: 'LP Q',
+    color: '#047857',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -211,6 +224,7 @@ export const nodeDefinitions = {
   },
   lpa: {
     label: 'LP Attack',
+    color: '#0d9488',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -226,6 +240,7 @@ export const nodeDefinitions = {
   },
   lps: {
     label: 'LP Sustain',
+    color: '#0891b2',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -241,6 +256,7 @@ export const nodeDefinitions = {
   },
   lpr: {
     label: 'LP Release',
+    color: '#0e7490',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -256,6 +272,7 @@ export const nodeDefinitions = {
   },
   room: {
     label: 'Room',
+    color: '#059669',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -273,6 +290,7 @@ export const nodeDefinitions = {
   // === ADSR Envelope nodes ===
   attack: {
     label: 'Attack',
+    color: '#f43f5e',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -288,6 +306,7 @@ export const nodeDefinitions = {
   },
   sustain: {
     label: 'Sustain',
+    color: '#ec4899',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -303,6 +322,7 @@ export const nodeDefinitions = {
   },
   release: {
     label: 'Release',
+    color: '#d946ef',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -320,6 +340,7 @@ export const nodeDefinitions = {
   // === Parameter nodes ===
   postgain: {
     label: 'Postgain',
+    color: '#84cc16',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -335,6 +356,7 @@ export const nodeDefinitions = {
   },
   pcurve: {
     label: 'Pcurve',
+    color: '#06b6d4',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -350,6 +372,7 @@ export const nodeDefinitions = {
   },
   pdecay: {
     label: 'Pdecay',
+    color: '#0891b2',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -367,6 +390,7 @@ export const nodeDefinitions = {
   // === Structural nodes ===
   ribbon: {
     label: 'Ribbon',
+    color: '#f43f5e',
     dataType: 'simple',
     inputs: 3,
     outputs: 1,
@@ -375,6 +399,7 @@ export const nodeDefinitions = {
   },
   pick: {
     label: 'Pick',
+    color: '#22d3ee',
     dataType: 'simple',
     inputs: 2,
     outputs: 1,
@@ -383,6 +408,7 @@ export const nodeDefinitions = {
   },
   struct: {
     label: 'Struct',
+    color: '#14b8a6',
     dataType: 'simple',
     inputs: 2,
     outputs: 1,
@@ -393,6 +419,7 @@ export const nodeDefinitions = {
   // === Distortion ===
   distort: {
     label: 'Distort',
+    color: '#dc2626',
     dataType: 'distort',
     inputs: 1,
     outputs: 1,
@@ -402,6 +429,7 @@ export const nodeDefinitions = {
   // === Routing nodes ===
   orbit: {
     label: 'Orbit',
+    color: '#7c3aed',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -417,6 +445,7 @@ export const nodeDefinitions = {
   },
   duckorbit: {
     label: 'Duck',
+    color: '#6d28d9',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -432,6 +461,7 @@ export const nodeDefinitions = {
   },
   duckattack: {
     label: 'Duck Att',
+    color: '#5b21b6',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -447,6 +477,7 @@ export const nodeDefinitions = {
   },
   duckdepth: {
     label: 'Duck Depth',
+    color: '#4c1d95',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -464,6 +495,7 @@ export const nodeDefinitions = {
   // === Output node ===
   output: {
     label: 'Output',
+    color: '#fb923c',
     dataType: 'output',
     inputs: 1,
     outputs: 0,
@@ -475,6 +507,7 @@ export const nodeDefinitions = {
   // === Global nodes (standalone, inserted at start) ===
   cpm: {
     label: 'CPM',
+    color: '#f97316',
     dataType: 'slider',
     inputs: 0,
     outputs: 0,
@@ -492,6 +525,7 @@ export const nodeDefinitions = {
   // === Bank node ===
   bank: {
     label: 'Bank',
+    color: '#f472b6',
     dataType: 'bank',
     inputs: 1,
     outputs: 1,
@@ -501,6 +535,7 @@ export const nodeDefinitions = {
   // === Pattern generator nodes ===
   irand: {
     label: 'Irand',
+    color: '#06b6d4',
     dataType: 'slider',
     inputs: 0,
     outputs: 1,
@@ -516,6 +551,7 @@ export const nodeDefinitions = {
   },
   sub: {
     label: 'Sub',
+    color: '#14b8a6',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -531,6 +567,7 @@ export const nodeDefinitions = {
   },
   seg: {
     label: 'Seg',
+    color: '#8b5cf6',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -546,6 +583,7 @@ export const nodeDefinitions = {
   },
   scale: {
     label: 'Scale',
+    color: '#ec4899',
     dataType: 'scale',
     inputs: 1,
     outputs: 1,
@@ -556,6 +594,7 @@ export const nodeDefinitions = {
   // === Variable nodes ===
   setVar: {
     label: 'Set',
+    color: '#8b5cf6',
     dataType: 'var',
     inputs: 1,
     outputs: 0,
@@ -563,6 +602,7 @@ export const nodeDefinitions = {
   },
   getVar: {
     label: 'Get',
+    color: '#a78bfa',
     dataType: 'var',
     inputs: 0,
     outputs: 1,
@@ -572,6 +612,7 @@ export const nodeDefinitions = {
   // === Special nodes (not in definitions, added here for completeness) ===
   slider: {
     label: 'Slider',
+    color: '#f59e0b',
     dataType: 'standaloneSlider',
     inputs: 0,
     outputs: 1,
@@ -579,6 +620,7 @@ export const nodeDefinitions = {
   },
   value: {
     label: 'Value',
+    color: '#fbbf24',
     dataType: 'value',
     inputs: 0,
     outputs: 1,
@@ -586,6 +628,7 @@ export const nodeDefinitions = {
   },
   array: {
     label: 'Array',
+    color: '#818cf8',
     dataType: 'array',
     inputs: 2,
     outputs: 1,
@@ -593,6 +636,7 @@ export const nodeDefinitions = {
   },
   code: {
     label: 'Code',
+    color: '#34d399',
     dataType: 'code',
     inputs: 0,
     outputs: 1,
