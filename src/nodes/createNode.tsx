@@ -18,6 +18,14 @@ interface GenericNodeData {
   isInput?: boolean;
   expanded?: boolean;
   isPlaying?: boolean;
+  // Text input data
+  name?: string;
+  bank?: string;
+  scale?: string;
+  // Code editor data
+  code?: string;
+  // Dynamic generic data access
+  [key: string]: unknown;
 }
 
 export function createNode(type: NodeType) {
@@ -37,8 +45,38 @@ export function createNode(type: NodeType) {
     const { isTriggered: triggered } = useTrigger(id);
     const events = useEvents();
 
+    // Calculate dynamic inputs if enabled
+    let inputCount = def.inputs;
+    let dynamicInputLabels: string[] | undefined;
+
+    if (def.dynamicInputs) {
+      // Find the highest connected input index
+      const connectedInputs = edges
+        .filter((e) => e.target === id && e.targetHandle?.startsWith('in-'))
+        .map((e) => parseInt(e.targetHandle?.split('-')[1] || '0'));
+
+      const highestConnectedIndex =
+        connectedInputs.length > 0 ? Math.max(...connectedInputs) : -1;
+
+      // Always have one more input than the highest connected index (minimum 1)
+      inputCount = Math.max(1, highestConnectedIndex + 2);
+      dynamicInputLabels = Array.from(
+        { length: inputCount },
+        (_, i) => `[${i}]`
+      );
+    }
+
     // Error checking functions
     const inputErrorFn = (index: number) => {
+      // For dynamic inputs, only show error on connected inputs, not the empty slot
+      if (def.dynamicInputs) {
+        const connectedInputs = edges
+          .filter((e) => e.target === id && e.targetHandle?.startsWith('in-'))
+          .map((e) => parseInt(e.targetHandle?.split('-')[1] || '0'));
+        const highestConnectedIndex =
+          connectedInputs.length > 0 ? Math.max(...connectedInputs) : -1;
+        if (index > highestConnectedIndex) return false;
+      }
       return !edges.some(
         (e) => e.target === id && e.targetHandle === `in-${index}`
       );
@@ -88,23 +126,50 @@ export function createNode(type: NodeType) {
     const isTriggered =
       type === 'output' ? data.isPlaying && triggered : triggered;
 
+    // Build text input element if defined
+    const textInputElement = def.textInput && (
+      <input
+        type="text"
+        value={(data[def.textInput.dataKey] as string) || ''}
+        onChange={(e) =>
+          updateNodeData(id, { [def.textInput!.dataKey]: e.target.value })
+        }
+        placeholder={def.textInput.placeholder}
+        className="w-full text-xs"
+      />
+    );
+
+    // Build code editor element if defined
+    const codeEditorElement = def.codeEditor && (
+      <textarea
+        value={data.code || ''}
+        onChange={(e) => updateNodeData(id, { code: e.target.value })}
+        className="w-48 h-20 bg-(--background) rounded px-2 py-1 border-b text-xs font-mono focus:outline-none resize-none"
+        placeholder={def.codeEditor.placeholder}
+      />
+    );
+
     return (
       <BaseNode
         type={type}
         nodeId={id}
         events={events}
         label={def.label}
-        inputs={def.inputs}
+        inputs={inputCount}
         outputs={def.outputs}
         selected={selected}
         triggered={isTriggered}
         modeOutput={def.modeOutput}
         className={def.className}
-        inputLabels={def.inputLabels}
-        inputErrorFn={def.inputs > 0 ? inputErrorFn : undefined}
+        inputLabels={dynamicInputLabels || def.inputLabels}
+        inputErrorFn={inputCount > 0 ? inputErrorFn : undefined}
         outputErrorFn={def.outputs > 0 ? outputErrorFn : undefined}
+        sliderOnly={def.sliderOnly}
         {...sliderConfig}
-      />
+      >
+        {textInputElement}
+        {codeEditorElement}
+      </BaseNode>
     );
   }
 

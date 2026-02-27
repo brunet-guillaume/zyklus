@@ -43,6 +43,21 @@ export interface NodeDefinition {
   inputLabels?: string[];
   slider?: SliderDefaults;
   compile: CompilePattern;
+
+  // === UI Options ===
+  // Text input field (for var name, bank name, scale, etc.)
+  textInput?: {
+    placeholder: string;
+    dataKey: string;
+  };
+  // Code editor textarea
+  codeEditor?: {
+    placeholder: string;
+  };
+  // Dynamic inputs that grow based on connections (array node)
+  dynamicInputs?: boolean;
+  // Standalone slider (no mode switcher, always shows slider)
+  sliderOnly?: boolean;
 }
 
 export const nodeDefinitions = {
@@ -529,6 +544,7 @@ export const nodeDefinitions = {
     dataType: 'bank',
     inputs: 1,
     outputs: 1,
+    textInput: { placeholder: 'RolandTR808', dataKey: 'bank' },
     compile: { type: 'custom' } as const,
   },
 
@@ -588,6 +604,7 @@ export const nodeDefinitions = {
     inputs: 1,
     outputs: 1,
     modeOutput: true,
+    textInput: { placeholder: 'c:minor', dataKey: 'scale' },
     compile: { type: 'custom' } as const,
   },
 
@@ -598,6 +615,7 @@ export const nodeDefinitions = {
     dataType: 'var',
     inputs: 1,
     outputs: 0,
+    textInput: { placeholder: 'var name', dataKey: 'name' },
     compile: { type: 'custom' } as const,
   },
   getVar: {
@@ -606,16 +624,26 @@ export const nodeDefinitions = {
     dataType: 'var',
     inputs: 0,
     outputs: 1,
+    textInput: { placeholder: 'var name', dataKey: 'name' },
     compile: { type: 'custom' } as const,
   },
 
-  // === Special nodes (not in definitions, added here for completeness) ===
+  // === Special nodes ===
   slider: {
     label: 'Slider',
     color: '#f59e0b',
     dataType: 'standaloneSlider',
     inputs: 0,
     outputs: 1,
+    className: 'w-46',
+    sliderOnly: true,
+    slider: {
+      value: 50,
+      min: 0,
+      max: 100,
+      step: 1,
+      defaultMode: 'slider' as const,
+    },
     compile: { type: 'custom' } as const,
   },
   value: {
@@ -630,16 +658,18 @@ export const nodeDefinitions = {
     label: 'Array',
     color: '#818cf8',
     dataType: 'array',
-    inputs: 2,
+    inputs: 1,
     outputs: 1,
+    dynamicInputs: true,
     compile: { type: 'custom' } as const,
   },
   code: {
     label: 'Code',
     color: '#34d399',
     dataType: 'code',
-    inputs: 0,
+    inputs: 1,
     outputs: 1,
+    codeEditor: { placeholder: 'note("c3 e3 g3")' },
     compile: { type: 'custom' } as const,
   },
 } as const satisfies Record<string, NodeDefinition>;
