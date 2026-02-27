@@ -5,12 +5,6 @@ import { useTrigger } from '../hooks/useTrigger';
 import { useEvents } from '../hooks/useEvents';
 import type { SliderNode as SliderNodeType } from './types';
 
-declare global {
-  interface Window {
-    __zyklusSliders?: Record<string, number>;
-  }
-}
-
 export function SliderNode({ id, data, selected }: NodeProps<SliderNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();

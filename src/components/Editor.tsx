@@ -15,13 +15,6 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes, type AppNode } from '../nodes';
-
-declare global {
-  interface Window {
-    __zyklusEdges?: Edge[];
-    __zyklusNodes?: AppNode[];
-  }
-}
 import {
   compileGraph,
   initAudio,

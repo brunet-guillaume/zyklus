@@ -146,24 +146,6 @@ function dispatchTrigger(hap?: Hap) {
   }
 }
 
-// Make the trigger function globally accessible
-declare global {
-  interface Window {
-    __zyklusTrigger: (hap?: Hap) => void;
-    __zyklusEdges?: Array<{
-      source: string;
-      target: string;
-      sourceHandle?: string;
-      targetHandle?: string;
-    }>;
-    __zyklusNodes?: Array<{
-      id: string;
-      type?: string;
-      data?: { name?: string };
-    }>;
-  }
-}
-
 // Get all descendants of a node with their depth (nodes connected to its outputs, recursively)
 function getDescendants(nodeId: string): Array<{ id: string; depth: number }> {
   const edges = window.__zyklusEdges;

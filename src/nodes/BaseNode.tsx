@@ -92,7 +92,12 @@ export function BaseNode({
   // Sync slider value to global variable for real-time Strudel access (only in slider mode)
   const sliderValue = slider?.value;
   useEffect(() => {
-    if (nodeId && isSlider && Number.isFinite(sliderValue)) {
+    if (
+      nodeId &&
+      isSlider &&
+      sliderValue !== undefined &&
+      Number.isFinite(sliderValue)
+    ) {
       if (!window.__zyklusSliders) {
         window.__zyklusSliders = {};
       }

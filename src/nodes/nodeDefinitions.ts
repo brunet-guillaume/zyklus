@@ -9,6 +9,20 @@ export interface SliderDefaults {
   defaultMode: 'value' | 'slider';
 }
 
+// Data type keys - maps to actual data types in types.ts
+export type DataTypeKey =
+  | 'simple'
+  | 'slider'
+  | 'output'
+  | 'value'
+  | 'array'
+  | 'code'
+  | 'var'
+  | 'bank'
+  | 'scale'
+  | 'distort'
+  | 'standaloneSlider';
+
 // Compilation patterns
 export type CompilePattern =
   | { type: 'transform'; method: string } // .method(paramValue) - uses slider value
@@ -20,6 +34,7 @@ export type CompilePattern =
 
 export interface NodeDefinition {
   label: string;
+  dataType: DataTypeKey;
   inputs: number;
   outputs: number;
   modeOutput?: boolean;
@@ -33,12 +48,14 @@ export const nodeDefinitions = {
   // === Pattern/Source nodes ===
   sound: {
     label: 'Sound',
+    dataType: 'simple',
     inputs: 1,
     outputs: 1,
     compile: { type: 'custom' } as const,
   },
   note: {
     label: 'Note',
+    dataType: 'simple',
     inputs: 1,
     outputs: 1,
     modeOutput: true,
@@ -49,6 +66,7 @@ export const nodeDefinitions = {
   // === Transform nodes ===
   fast: {
     label: 'Fast',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -63,6 +81,7 @@ export const nodeDefinitions = {
   },
   slow: {
     label: 'Slow',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -77,6 +96,7 @@ export const nodeDefinitions = {
   },
   rev: {
     label: 'Rev',
+    dataType: 'simple',
     inputs: 1,
     outputs: 1,
     modeOutput: true,
@@ -86,6 +106,7 @@ export const nodeDefinitions = {
   // === Synth nodes ===
   supersaw: {
     label: 'Supersaw',
+    dataType: 'simple',
     inputs: 1,
     outputs: 1,
     modeOutput: true,
@@ -100,6 +121,7 @@ export const nodeDefinitions = {
   // === Effect nodes ===
   gain: {
     label: 'Gain',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -114,6 +136,7 @@ export const nodeDefinitions = {
   },
   reverb: {
     label: 'Reverb',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -128,6 +151,7 @@ export const nodeDefinitions = {
   },
   delay: {
     label: 'Delay',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -142,6 +166,7 @@ export const nodeDefinitions = {
   },
   lpf: {
     label: 'Low-pass',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -156,6 +181,7 @@ export const nodeDefinitions = {
   },
   lpenv: {
     label: 'LP Env',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -170,6 +196,7 @@ export const nodeDefinitions = {
   },
   lpq: {
     label: 'LP Q',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -184,6 +211,7 @@ export const nodeDefinitions = {
   },
   lpa: {
     label: 'LP Attack',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -198,6 +226,7 @@ export const nodeDefinitions = {
   },
   lps: {
     label: 'LP Sustain',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -212,6 +241,7 @@ export const nodeDefinitions = {
   },
   lpr: {
     label: 'LP Release',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -226,6 +256,7 @@ export const nodeDefinitions = {
   },
   room: {
     label: 'Room',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -242,6 +273,7 @@ export const nodeDefinitions = {
   // === ADSR Envelope nodes ===
   attack: {
     label: 'Attack',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -256,6 +288,7 @@ export const nodeDefinitions = {
   },
   sustain: {
     label: 'Sustain',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -270,6 +303,7 @@ export const nodeDefinitions = {
   },
   release: {
     label: 'Release',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -286,6 +320,7 @@ export const nodeDefinitions = {
   // === Parameter nodes ===
   postgain: {
     label: 'Postgain',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -300,6 +335,7 @@ export const nodeDefinitions = {
   },
   pcurve: {
     label: 'Pcurve',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -314,6 +350,7 @@ export const nodeDefinitions = {
   },
   pdecay: {
     label: 'Pdecay',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -330,6 +367,7 @@ export const nodeDefinitions = {
   // === Structural nodes ===
   ribbon: {
     label: 'Ribbon',
+    dataType: 'simple',
     inputs: 3,
     outputs: 1,
     inputLabels: ['pattern', 'offset', 'cycles'],
@@ -337,6 +375,7 @@ export const nodeDefinitions = {
   },
   pick: {
     label: 'Pick',
+    dataType: 'simple',
     inputs: 2,
     outputs: 1,
     inputLabels: ['values', 'indices'],
@@ -344,6 +383,7 @@ export const nodeDefinitions = {
   },
   struct: {
     label: 'Struct',
+    dataType: 'simple',
     inputs: 2,
     outputs: 1,
     inputLabels: ['pattern', 'struct'],
@@ -353,6 +393,7 @@ export const nodeDefinitions = {
   // === Distortion ===
   distort: {
     label: 'Distort',
+    dataType: 'distort',
     inputs: 1,
     outputs: 1,
     compile: { type: 'custom' } as const,
@@ -361,6 +402,7 @@ export const nodeDefinitions = {
   // === Routing nodes ===
   orbit: {
     label: 'Orbit',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -375,6 +417,7 @@ export const nodeDefinitions = {
   },
   duckorbit: {
     label: 'Duck',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -389,6 +432,7 @@ export const nodeDefinitions = {
   },
   duckattack: {
     label: 'Duck Att',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -403,6 +447,7 @@ export const nodeDefinitions = {
   },
   duckdepth: {
     label: 'Duck Depth',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -419,6 +464,7 @@ export const nodeDefinitions = {
   // === Output node ===
   output: {
     label: 'Output',
+    dataType: 'output',
     inputs: 1,
     outputs: 0,
     modeOutput: true,
@@ -429,6 +475,7 @@ export const nodeDefinitions = {
   // === Global nodes (standalone, inserted at start) ===
   cpm: {
     label: 'CPM',
+    dataType: 'slider',
     inputs: 0,
     outputs: 0,
     className: 'w-46',
@@ -445,6 +492,7 @@ export const nodeDefinitions = {
   // === Bank node ===
   bank: {
     label: 'Bank',
+    dataType: 'bank',
     inputs: 1,
     outputs: 1,
     compile: { type: 'custom' } as const,
@@ -453,6 +501,7 @@ export const nodeDefinitions = {
   // === Pattern generator nodes ===
   irand: {
     label: 'Irand',
+    dataType: 'slider',
     inputs: 0,
     outputs: 1,
     className: 'w-46',
@@ -467,6 +516,7 @@ export const nodeDefinitions = {
   },
   sub: {
     label: 'Sub',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -481,6 +531,7 @@ export const nodeDefinitions = {
   },
   seg: {
     label: 'Seg',
+    dataType: 'slider',
     inputs: 1,
     outputs: 1,
     className: 'w-46',
@@ -495,6 +546,7 @@ export const nodeDefinitions = {
   },
   scale: {
     label: 'Scale',
+    dataType: 'scale',
     inputs: 1,
     outputs: 1,
     modeOutput: true,
@@ -504,12 +556,44 @@ export const nodeDefinitions = {
   // === Variable nodes ===
   setVar: {
     label: 'Set',
+    dataType: 'var',
     inputs: 1,
     outputs: 0,
     compile: { type: 'custom' } as const,
   },
   getVar: {
     label: 'Get',
+    dataType: 'var',
+    inputs: 0,
+    outputs: 1,
+    compile: { type: 'custom' } as const,
+  },
+
+  // === Special nodes (not in definitions, added here for completeness) ===
+  slider: {
+    label: 'Slider',
+    dataType: 'standaloneSlider',
+    inputs: 0,
+    outputs: 1,
+    compile: { type: 'custom' } as const,
+  },
+  value: {
+    label: 'Value',
+    dataType: 'value',
+    inputs: 0,
+    outputs: 1,
+    compile: { type: 'custom' } as const,
+  },
+  array: {
+    label: 'Array',
+    dataType: 'array',
+    inputs: 2,
+    outputs: 1,
+    compile: { type: 'custom' } as const,
+  },
+  code: {
+    label: 'Code',
+    dataType: 'code',
     inputs: 0,
     outputs: 1,
     compile: { type: 'custom' } as const,

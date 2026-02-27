@@ -1,11 +1,12 @@
 import type { Node } from '@xyflow/react';
+import type { nodeDefinitions } from './nodeDefinitions';
 
 // === Base data types ===
 
 // For nodes without any state
 export type SimpleNodeData = Record<string, never>;
 
-// For nodes with slider support (shared by 14 nodes)
+// For nodes with slider support (shared by many nodes)
 export type SliderNodeData = {
   value: number;
   min?: number;
@@ -70,115 +71,40 @@ export type DistortNodeData = {
   mode: string;
 };
 
-// === Node type definitions ===
+// === Data type mapping ===
+// Maps DataTypeKey to actual data types
 
-// Simple nodes (no data)
-export type SoundNode = Node<SimpleNodeData, 'sound'>;
-export type NoteNode = Node<SimpleNodeData, 'note'>;
-export type RevNode = Node<SimpleNodeData, 'rev'>;
-export type SupersawNode = Node<SimpleNodeData, 'supersaw'>;
-export type StructNode = Node<SimpleNodeData, 'struct'>;
-export type PickNode = Node<SimpleNodeData, 'pick'>;
-export type RibbonNode = Node<SimpleNodeData, 'ribbon'>;
+export type DataTypeMap = {
+  simple: SimpleNodeData;
+  slider: SliderNodeData;
+  output: OutputNodeData;
+  value: ValueNodeData;
+  array: ArrayNodeData;
+  code: CodeNodeData;
+  var: VarNodeData;
+  bank: BankNodeData;
+  scale: ScaleNodeData;
+  distort: DistortNodeData;
+  standaloneSlider: StandaloneSliderNodeData;
+};
 
-// Slider nodes (all use SliderNodeData)
-export type FastNode = Node<SliderNodeData, 'fast'>;
-export type SlowNode = Node<SliderNodeData, 'slow'>;
-export type GainNode = Node<SliderNodeData, 'gain'>;
-export type ReverbNode = Node<SliderNodeData, 'reverb'>;
-export type DelayNode = Node<SliderNodeData, 'delay'>;
-export type LpfNode = Node<SliderNodeData, 'lpf'>;
-export type LpEnvNode = Node<SliderNodeData, 'lpenv'>;
-export type LpqNode = Node<SliderNodeData, 'lpq'>;
-export type LpaNode = Node<SliderNodeData, 'lpa'>;
-export type LpsNode = Node<SliderNodeData, 'lps'>;
-export type LprNode = Node<SliderNodeData, 'lpr'>;
-export type RoomNode = Node<SliderNodeData, 'room'>;
-export type AttackNode = Node<SliderNodeData, 'attack'>;
-export type SustainNode = Node<SliderNodeData, 'sustain'>;
-export type ReleaseNode = Node<SliderNodeData, 'release'>;
-export type PostgainNode = Node<SliderNodeData, 'postgain'>;
-export type PcurveNode = Node<SliderNodeData, 'pcurve'>;
-export type PdecayNode = Node<SliderNodeData, 'pdecay'>;
-export type IrandNode = Node<SliderNodeData, 'irand'>;
-export type SubNode = Node<SliderNodeData, 'sub'>;
-export type SegNode = Node<SliderNodeData, 'seg'>;
-export type OrbitNode = Node<SliderNodeData, 'orbit'>;
-export type DuckorbitNode = Node<SliderNodeData, 'duckorbit'>;
-export type DuckattackNode = Node<SliderNodeData, 'duckattack'>;
-export type DuckdepthNode = Node<SliderNodeData, 'duckdepth'>;
-export type ScaleNode = Node<ScaleNodeData, 'scale'>;
-export type DistortNode = Node<DistortNodeData, 'distort'>;
+// === Auto-generated node types from definitions ===
 
-// Special nodes
-export type OutputNode = Node<OutputNodeData, 'output'>;
-export type SliderNode = Node<StandaloneSliderNodeData, 'slider'>;
-export type ValueNode = Node<ValueNodeData, 'value'>;
-export type ArrayNode = Node<ArrayNodeData, 'array'>;
-export type CodeNode = Node<CodeNodeData, 'code'>;
+// Extract node types from definitions
+export type NodeType = keyof typeof nodeDefinitions;
 
-// Global nodes (standalone)
-export type CpmNode = Node<SliderNodeData, 'cpm'>;
+// Helper type to get data type for a node type
+type NodeDataType<T extends NodeType> =
+  DataTypeMap[(typeof nodeDefinitions)[T]['dataType']];
 
-// Variable nodes
-export type SetVarNode = Node<VarNodeData, 'setVar'>;
-export type GetVarNode = Node<VarNodeData, 'getVar'>;
+// Generate individual node types
+export type GeneratedNode<T extends NodeType> = Node<NodeDataType<T>, T>;
 
-// Bank node
-export type BankNode = Node<BankNodeData, 'bank'>;
+// === Union type for all nodes (auto-generated) ===
 
-// === Union type for all nodes ===
-
-export type AppNode =
-  // Simple nodes
-  | SoundNode
-  | NoteNode
-  | RevNode
-  | SupersawNode
-  | StructNode
-  | PickNode
-  | RibbonNode
-  // Slider nodes
-  | FastNode
-  | SlowNode
-  | GainNode
-  | ReverbNode
-  | DelayNode
-  | LpfNode
-  | LpEnvNode
-  | LpqNode
-  | LpaNode
-  | LpsNode
-  | LprNode
-  | RoomNode
-  | AttackNode
-  | SustainNode
-  | ReleaseNode
-  | PostgainNode
-  | PcurveNode
-  | PdecayNode
-  | IrandNode
-  | SubNode
-  | SegNode
-  | ScaleNode
-  | DistortNode
-  | OrbitNode
-  | DuckorbitNode
-  | DuckattackNode
-  | DuckdepthNode
-  // Special nodes
-  | OutputNode
-  | SliderNode
-  | ValueNode
-  | ArrayNode
-  | CodeNode
-  // Global nodes
-  | CpmNode
-  // Variable nodes
-  | SetVarNode
-  | GetVarNode
-  // Bank node
-  | BankNode;
+export type AppNode = {
+  [K in NodeType]: Node<NodeDataType<K>, K>;
+}[NodeType];
 
 // === Legacy exports for backwards compatibility ===
 // (can be removed once all code is migrated)
@@ -203,3 +129,48 @@ export type PostgainNodeData = SliderNodeData;
 export type PcurveNodeData = SliderNodeData;
 export type PdecayNodeData = SliderNodeData;
 export type SliderNodeData2 = StandaloneSliderNodeData;
+
+// Legacy individual node types (kept for compatibility)
+export type SoundNode = GeneratedNode<'sound'>;
+export type NoteNode = GeneratedNode<'note'>;
+export type RevNode = GeneratedNode<'rev'>;
+export type SupersawNode = GeneratedNode<'supersaw'>;
+export type StructNode = GeneratedNode<'struct'>;
+export type PickNode = GeneratedNode<'pick'>;
+export type RibbonNode = GeneratedNode<'ribbon'>;
+export type FastNode = GeneratedNode<'fast'>;
+export type SlowNode = GeneratedNode<'slow'>;
+export type GainNode = GeneratedNode<'gain'>;
+export type ReverbNode = GeneratedNode<'reverb'>;
+export type DelayNode = GeneratedNode<'delay'>;
+export type LpfNode = GeneratedNode<'lpf'>;
+export type LpEnvNode = GeneratedNode<'lpenv'>;
+export type LpqNode = GeneratedNode<'lpq'>;
+export type LpaNode = GeneratedNode<'lpa'>;
+export type LpsNode = GeneratedNode<'lps'>;
+export type LprNode = GeneratedNode<'lpr'>;
+export type RoomNode = GeneratedNode<'room'>;
+export type AttackNode = GeneratedNode<'attack'>;
+export type SustainNode = GeneratedNode<'sustain'>;
+export type ReleaseNode = GeneratedNode<'release'>;
+export type PostgainNode = GeneratedNode<'postgain'>;
+export type PcurveNode = GeneratedNode<'pcurve'>;
+export type PdecayNode = GeneratedNode<'pdecay'>;
+export type IrandNode = GeneratedNode<'irand'>;
+export type SubNode = GeneratedNode<'sub'>;
+export type SegNode = GeneratedNode<'seg'>;
+export type ScaleNode = GeneratedNode<'scale'>;
+export type DistortNode = GeneratedNode<'distort'>;
+export type OrbitNode = GeneratedNode<'orbit'>;
+export type DuckorbitNode = GeneratedNode<'duckorbit'>;
+export type DuckattackNode = GeneratedNode<'duckattack'>;
+export type DuckdepthNode = GeneratedNode<'duckdepth'>;
+export type OutputNode = GeneratedNode<'output'>;
+export type SliderNode = GeneratedNode<'slider'>;
+export type ValueNode = GeneratedNode<'value'>;
+export type ArrayNode = GeneratedNode<'array'>;
+export type CodeNode = GeneratedNode<'code'>;
+export type CpmNode = GeneratedNode<'cpm'>;
+export type SetVarNode = GeneratedNode<'setVar'>;
+export type GetVarNode = GeneratedNode<'getVar'>;
+export type BankNode = GeneratedNode<'bank'>;

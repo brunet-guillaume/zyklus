@@ -1,11 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 
-declare global {
-  interface Window {
-    __zyklusCpm?: number;
-  }
-}
-
 export interface TriggerEvent {
   nodeType?: string;
   note?: string | number | null;

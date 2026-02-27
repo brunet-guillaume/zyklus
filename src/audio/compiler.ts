@@ -15,16 +15,6 @@ type BuildResult = {
 // Map of nodeId to start position in compiled code (after the opening quote)
 export type ValueStartMap = Map<string, number>;
 
-// Expose globals
-declare global {
-  interface Window {
-    __zyklusCpm?: number;
-    __zyklusValueStarts?: ValueStartMap;
-    __zyklusCompiledCode?: string;
-    __zyklusVars?: Record<string, unknown>;
-  }
-}
-
 export interface CompileResult {
   code: string;
   cleanCode: string; // Code without onTrigger callbacks, for querying
