@@ -15,4 +15,12 @@ export const nodeTypes: NodeTypes = {
 };
 
 export * from './types';
-export { nodeDefinitions, type NodeType } from './nodeDefinitions';
+export {
+  nodeDefinitions,
+  getDefaultData,
+  getNodeOptions,
+  getNodeCategories,
+  type NodeType,
+  type NodeOption,
+  type NodeCategory,
+} from './nodeDefinitions';

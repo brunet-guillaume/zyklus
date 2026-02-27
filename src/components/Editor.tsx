@@ -14,7 +14,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { nodeTypes, type AppNode } from '../nodes';
+import { nodeTypes, type AppNode, getDefaultData } from '../nodes';
 import {
   compileGraph,
   initAudio,
@@ -52,69 +52,6 @@ const initialEdges = (savedCanvas?.edges ?? defaultCanvas.edges) as Edge[];
 // Calculate initial nodeId from existing nodes
 let nodeId = Math.max(...initialNodes.map((n) => parseInt(n.id) || 0), 0) + 1;
 const getNodeId = () => `${nodeId++}`;
-
-function getDefaultData(type: string) {
-  switch (type) {
-    case 'sound':
-      return {};
-    case 'note':
-      return {};
-    case 'code':
-      return { code: 'c3 e3 g3' };
-    case 'value':
-      return { value: 'c3' };
-    case 'array':
-      return { inputCount: 2 };
-    case 'pick':
-      return { values: 'c3, e3, g3, c4', indices: '<0 1 2 3>' };
-    case 'struct':
-      return {};
-    case 'fast':
-      return { value: 2 };
-    case 'slow':
-      return { value: 2 };
-    case 'rev':
-      return {};
-    case 'supersaw':
-      return {};
-    case 'slider':
-      return { min: 20, max: 2000, value: 1000, step: 10 };
-    case 'gain':
-      return { value: 0.8 };
-    case 'reverb':
-      return { value: 0.5 };
-    case 'delay':
-      return { value: 0.5 };
-    case 'lpf':
-      return { value: 1000 };
-    case 'lpenv':
-      return { value: 4 };
-    case 'room':
-      return { value: 0.5 };
-    case 'attack':
-      return { value: 0.01 };
-    case 'sustain':
-      return { value: 0.5 };
-    case 'release':
-      return { value: 0.1 };
-    case 'postgain':
-      return { value: 0.8 };
-    case 'pcurve':
-      return { value: 2 };
-    case 'pdecay':
-      return { value: 0.1 };
-    case 'output':
-      return { isPlaying: false };
-    case 'setVar':
-      return { name: '' };
-    case 'getVar':
-      return { name: '' };
-    case 'bank':
-      return { bank: 'RolandTR808' };
-    default:
-      return {};
-  }
-}
 
 function EditorContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);

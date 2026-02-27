@@ -107,6 +107,12 @@ export interface NodeDefinition {
   inputLabels?: string[];
   slider?: SliderDefaults;
 
+  // === Default data for new nodes ===
+  defaultData?: Record<string, unknown>;
+
+  // === Menu ===
+  menuPath?: string; // Category path for context menu (e.g. "Effects", "Transform")
+
   // === Compilation ===
   // Main compile function - builds code for this node
   compile: CompileFunction;
@@ -134,6 +140,7 @@ export const nodeDefinitions = {
   sound: {
     label: 'Sound',
     color: '#ffa577',
+    menuPath: 'Generators',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -149,6 +156,7 @@ export const nodeDefinitions = {
   note: {
     label: 'Note',
     color: '#71d7ca',
+    menuPath: 'Generators',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -168,6 +176,7 @@ export const nodeDefinitions = {
   fast: {
     label: 'Fast',
     color: '#60a5fa',
+    menuPath: 'Transform',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -184,6 +193,7 @@ export const nodeDefinitions = {
   slow: {
     label: 'Slow',
     color: '#a78bfa',
+    menuPath: 'Transform',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -200,6 +210,7 @@ export const nodeDefinitions = {
   rev: {
     label: 'Rev',
     color: '#f472b6',
+    menuPath: 'Transform',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -211,6 +222,7 @@ export const nodeDefinitions = {
   supersaw: {
     label: 'Supersaw',
     color: '#e879f9',
+    menuPath: 'Generators',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -223,6 +235,7 @@ export const nodeDefinitions = {
   gain: {
     label: 'Gain',
     color: '#4ade80',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -239,6 +252,7 @@ export const nodeDefinitions = {
   reverb: {
     label: 'Reverb',
     color: '#22c55e',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -255,6 +269,7 @@ export const nodeDefinitions = {
   delay: {
     label: 'Delay',
     color: '#16a34a',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -271,6 +286,7 @@ export const nodeDefinitions = {
   lpf: {
     label: 'Low-pass',
     color: '#15803d',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -287,6 +303,7 @@ export const nodeDefinitions = {
   lpenv: {
     label: 'LP Env',
     color: '#166534',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -303,6 +320,7 @@ export const nodeDefinitions = {
   lpq: {
     label: 'LP Q',
     color: '#047857',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -319,6 +337,7 @@ export const nodeDefinitions = {
   lpa: {
     label: 'LP Attack',
     color: '#0d9488',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -335,6 +354,7 @@ export const nodeDefinitions = {
   lps: {
     label: 'LP Sustain',
     color: '#0891b2',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -351,6 +371,7 @@ export const nodeDefinitions = {
   lpr: {
     label: 'LP Release',
     color: '#0e7490',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -367,6 +388,7 @@ export const nodeDefinitions = {
   room: {
     label: 'Room',
     color: '#059669',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -385,6 +407,7 @@ export const nodeDefinitions = {
   attack: {
     label: 'Attack',
     color: '#f43f5e',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -401,6 +424,7 @@ export const nodeDefinitions = {
   sustain: {
     label: 'Sustain',
     color: '#ec4899',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -417,6 +441,7 @@ export const nodeDefinitions = {
   release: {
     label: 'Release',
     color: '#d946ef',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -435,6 +460,7 @@ export const nodeDefinitions = {
   postgain: {
     label: 'Postgain',
     color: '#84cc16',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -451,6 +477,7 @@ export const nodeDefinitions = {
   pcurve: {
     label: 'Pcurve',
     color: '#06b6d4',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -467,6 +494,7 @@ export const nodeDefinitions = {
   pdecay: {
     label: 'Pdecay',
     color: '#0891b2',
+    menuPath: 'Effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -485,6 +513,7 @@ export const nodeDefinitions = {
   ribbon: {
     label: 'Ribbon',
     color: '#f43f5e',
+    menuPath: 'Collections',
     dataType: 'simple',
     inputs: 3,
     outputs: 1,
@@ -505,10 +534,12 @@ export const nodeDefinitions = {
   pick: {
     label: 'Pick',
     color: '#22d3ee',
+    menuPath: 'Collections',
     dataType: 'simple',
     inputs: 2,
     outputs: 1,
     inputLabels: ['values', 'indices'],
+    defaultData: { values: 'c3, e3, g3, c4', indices: '<0 1 2 3>' },
     compile: (ctx) => {
       const values = ctx.getInput('in-0');
       const indices = ctx.getInput('in-1');
@@ -524,6 +555,7 @@ export const nodeDefinitions = {
   struct: {
     label: 'Struct',
     color: '#14b8a6',
+    menuPath: 'Collections',
     dataType: 'simple',
     inputs: 2,
     outputs: 1,
@@ -545,6 +577,7 @@ export const nodeDefinitions = {
   distort: {
     label: 'Distort',
     color: '#dc2626',
+    menuPath: 'Effects',
     dataType: 'distort',
     inputs: 1,
     outputs: 1,
@@ -565,6 +598,7 @@ export const nodeDefinitions = {
   orbit: {
     label: 'Orbit',
     color: '#7c3aed',
+    menuPath: 'Routing',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -581,6 +615,7 @@ export const nodeDefinitions = {
   duckorbit: {
     label: 'Duck',
     color: '#6d28d9',
+    menuPath: 'Routing',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -597,6 +632,7 @@ export const nodeDefinitions = {
   duckattack: {
     label: 'Duck Att',
     color: '#5b21b6',
+    menuPath: 'Routing',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -613,6 +649,7 @@ export const nodeDefinitions = {
   duckdepth: {
     label: 'Duck Depth',
     color: '#4c1d95',
+    menuPath: 'Routing',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -631,11 +668,13 @@ export const nodeDefinitions = {
   output: {
     label: 'Output',
     color: '#fb923c',
+    menuPath: 'Output',
     dataType: 'output',
     inputs: 1,
     outputs: 0,
     modeOutput: true,
     className: 'w-20',
+    defaultData: { isPlaying: false },
     compile: (ctx) => {
       const input = ctx.getInput('in-0');
       if (!input) return { code: '', sourceType: '', dataNodes: [] };
@@ -651,6 +690,7 @@ export const nodeDefinitions = {
   cpm: {
     label: 'CPM',
     color: '#f97316',
+    menuPath: 'Global',
     dataType: 'slider',
     inputs: 0,
     outputs: 0,
@@ -677,10 +717,12 @@ export const nodeDefinitions = {
   bank: {
     label: 'Bank',
     color: '#f472b6',
+    menuPath: 'Generators',
     dataType: 'bank',
     inputs: 1,
     outputs: 1,
     textInput: { placeholder: 'RolandTR808', dataKey: 'bank' },
+    defaultData: { bank: 'RolandTR808' },
     compile: (ctx) => {
       const input = ctx.getInput('in-0');
       if (!input) return { code: '', sourceType: '', dataNodes: [] };
@@ -693,6 +735,7 @@ export const nodeDefinitions = {
   irand: {
     label: 'Irand',
     color: '#06b6d4',
+    menuPath: 'Sources',
     dataType: 'slider',
     inputs: 0,
     outputs: 1,
@@ -713,6 +756,7 @@ export const nodeDefinitions = {
   sub: {
     label: 'Sub',
     color: '#14b8a6',
+    menuPath: 'Transform',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -729,6 +773,7 @@ export const nodeDefinitions = {
   seg: {
     label: 'Seg',
     color: '#8b5cf6',
+    menuPath: 'Transform',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -745,6 +790,7 @@ export const nodeDefinitions = {
   scale: {
     label: 'Scale',
     color: '#ec4899',
+    menuPath: 'Generators',
     dataType: 'scale',
     inputs: 1,
     outputs: 1,
@@ -762,10 +808,12 @@ export const nodeDefinitions = {
   setVar: {
     label: 'Set',
     color: '#8b5cf6',
+    menuPath: 'Variables',
     dataType: 'var',
     inputs: 1,
     outputs: 0,
     textInput: { placeholder: 'var name', dataKey: 'name' },
+    defaultData: { name: '' },
     compile: () => ({ code: '', sourceType: '', dataNodes: [] }),
     compileGlobal: (ctx) => {
       const varName = (ctx.data.name as string) || 'unnamed';
@@ -777,10 +825,12 @@ export const nodeDefinitions = {
   getVar: {
     label: 'Get',
     color: '#a78bfa',
+    menuPath: 'Variables',
     dataType: 'var',
     inputs: 0,
     outputs: 1,
     textInput: { placeholder: 'var name', dataKey: 'name' },
+    defaultData: { name: '' },
     compile: (ctx) => {
       const varName = (ctx.data.name as string) || 'unnamed';
       return {
@@ -795,6 +845,7 @@ export const nodeDefinitions = {
   slider: {
     label: 'Slider',
     color: '#f59e0b',
+    menuPath: 'Sources',
     dataType: 'standaloneSlider',
     inputs: 0,
     outputs: 1,
@@ -816,9 +867,11 @@ export const nodeDefinitions = {
   value: {
     label: 'Value',
     color: '#fbbf24',
+    menuPath: 'Sources',
     dataType: 'value',
     inputs: 0,
     outputs: 1,
+    defaultData: { value: 'c3' },
     compile: (ctx) => ({
       // Marker before quote: \x02id\x03"content"
       code: `${MARKER_START}${ctx.nodeId}${MARKER_END}"${ctx.data.value}"`,
@@ -829,10 +882,12 @@ export const nodeDefinitions = {
   array: {
     label: 'Array',
     color: '#818cf8',
+    menuPath: 'Collections',
     dataType: 'array',
     inputs: 1,
     outputs: 1,
     dynamicInputs: true,
+    defaultData: { inputCount: 2 },
     compile: (ctx) => {
       const sorted = [...ctx.inputs].sort((a, b) => {
         const aIdx = parseInt(a.handle.split('-')[1] || '0');
@@ -849,10 +904,12 @@ export const nodeDefinitions = {
   code: {
     label: 'Code',
     color: '#34d399',
+    menuPath: 'Sources',
     dataType: 'code',
     inputs: 1,
     outputs: 1,
     codeEditor: { placeholder: 'note("c3 e3 g3")' },
+    defaultData: { code: 'c3 e3 g3' },
     compile: (ctx) => ({
       code: `(${ctx.data.code})`,
       sourceType: 'code',
@@ -866,4 +923,83 @@ export type NodeType = keyof typeof nodeDefinitions;
 // Helper to get definition with proper typing
 export function getNodeDefinition(type: string): NodeDefinition | undefined {
   return nodeDefinitions[type as NodeType];
+}
+
+// === Menu generation helpers ===
+
+export interface NodeOption {
+  type: string;
+  label: string;
+}
+
+export interface NodeCategory {
+  label: string;
+  nodes: NodeOption[];
+}
+
+// Order of categories in the context menu
+const CATEGORY_ORDER = [
+  'Sources',
+  'Generators',
+  'Collections',
+  'Transform',
+  'Effects',
+  'Routing',
+  'Output',
+  'Global',
+  'Variables',
+];
+
+/**
+ * Get flat list of all node options (for NodePalette search)
+ */
+export function getNodeOptions(): NodeOption[] {
+  return Object.entries(nodeDefinitions).map(([type, def]) => ({
+    type,
+    label: def.label,
+  }));
+}
+
+/**
+ * Get categorized node options (for ContextMenu)
+ */
+export function getNodeCategories(): NodeCategory[] {
+  const categories = new Map<string, NodeOption[]>();
+
+  // Group nodes by menuPath
+  Object.entries(nodeDefinitions).forEach(([type, def]) => {
+    const path = def.menuPath || 'Other';
+    if (!categories.has(path)) {
+      categories.set(path, []);
+    }
+    categories.get(path)!.push({ type, label: def.label });
+  });
+
+  // Sort categories by defined order
+  return CATEGORY_ORDER.filter((cat) => categories.has(cat)).map((cat) => ({
+    label: cat,
+    nodes: categories.get(cat)!,
+  }));
+}
+
+/**
+ * Get default data for a new node of the given type
+ * Merges slider defaults with any custom defaultData
+ */
+export function getDefaultData(type: string): Record<string, unknown> {
+  const def = getNodeDefinition(type);
+  if (!def) return {};
+
+  // Start with slider defaults if present
+  const sliderDefaults = def.slider
+    ? {
+        value: def.slider.value,
+        min: def.slider.min,
+        max: def.slider.max,
+        step: def.slider.step,
+      }
+    : {};
+
+  // Merge with custom defaultData
+  return { ...sliderDefaults, ...(def.defaultData ?? {}) };
 }
