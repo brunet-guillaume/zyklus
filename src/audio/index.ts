@@ -1,2 +1,8 @@
-export { compileGraph } from './compiler';
-export { initAudio, playCode, stopPlayback, isInitialized } from './engine';
+export { compileGraph, type CompileResult } from './compiler';
+export {
+  initAudio,
+  playCode,
+  queryEvents,
+  stopPlayback,
+  isInitialized,
+} from './engine';

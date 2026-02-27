@@ -1,12 +1,14 @@
 import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
-import type { DelayNode as DelayNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
+import { useEvents } from '../hooks/useEvents';
+import type { ScaleNode as ScaleNodeType } from './types';
 
-export function DelayNode({ id, data, selected }: NodeProps<DelayNodeType>) {
+export function ScaleNode({ id, data, selected }: NodeProps<ScaleNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
-  const { isTriggered: triggered } = useTrigger(id);
+  const { isTriggered } = useTrigger(id);
+  const events = useEvents();
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -22,28 +24,25 @@ export function DelayNode({ id, data, selected }: NodeProps<DelayNodeType>) {
 
   return (
     <BaseNode
-      type="delay"
-      label="Delay"
+      type="scale"
+      nodeId={id}
+      label="Scale"
+      events={events}
       inputs={1}
       outputs={1}
       selected={selected}
-      triggered={triggered}
+      triggered={isTriggered}
+      modeOutput
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
     >
-      <div className="auto-width-input">
-        <span>{data.value ?? ' '}</span>
-        <input
-          type="number"
-          value={data.value ?? 0.5}
-          onChange={(e) =>
-            updateNodeData(id, { value: parseFloat(e.target.value) || 0 })
-          }
-          step="0.1"
-          min="0"
-          max="1"
-        />
-      </div>
+      <input
+        type="text"
+        value={data.scale || ''}
+        onChange={(e) => updateNodeData(id, { scale: e.target.value })}
+        placeholder="c:minor"
+        className="w-full text-xs"
+      />
     </BaseNode>
   );
 }

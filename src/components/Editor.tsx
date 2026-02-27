@@ -15,7 +15,20 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes, type AppNode } from '../nodes';
-import { compileGraph, initAudio, playCode, stopPlayback } from '../audio';
+
+declare global {
+  interface Window {
+    __zyklusEdges?: Edge[];
+    __zyklusNodes?: AppNode[];
+  }
+}
+import {
+  compileGraph,
+  initAudio,
+  playCode,
+  queryEvents,
+  stopPlayback,
+} from '../audio';
 import { ContextMenu } from './ContextMenu';
 import { NodePalette } from './NodePalette';
 import { GradientEdge } from './GradientEdge';
@@ -61,12 +74,18 @@ function getDefaultData(type: string) {
       return { inputCount: 2 };
     case 'pick':
       return { values: 'c3, e3, g3, c4', indices: '<0 1 2 3>' };
+    case 'struct':
+      return {};
     case 'fast':
       return { value: 2 };
     case 'slow':
       return { value: 2 };
     case 'rev':
       return {};
+    case 'supersaw':
+      return {};
+    case 'slider':
+      return { min: 20, max: 2000, value: 1000, step: 10 };
     case 'gain':
       return { value: 0.8 };
     case 'reverb':
@@ -75,8 +94,30 @@ function getDefaultData(type: string) {
       return { value: 0.5 };
     case 'lpf':
       return { value: 1000 };
+    case 'lpenv':
+      return { value: 4 };
+    case 'room':
+      return { value: 0.5 };
+    case 'attack':
+      return { value: 0.01 };
+    case 'sustain':
+      return { value: 0.5 };
+    case 'release':
+      return { value: 0.1 };
+    case 'postgain':
+      return { value: 0.8 };
+    case 'pcurve':
+      return { value: 2 };
+    case 'pdecay':
+      return { value: 0.1 };
     case 'output':
       return { isPlaying: false };
+    case 'setVar':
+      return { name: '' };
+    case 'getVar':
+      return { name: '' };
+    case 'bank':
+      return { bank: 'RolandTR808' };
     default:
       return {};
   }
@@ -87,7 +128,6 @@ function EditorContent() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [compiledCode, setCompiledCode] = useState('');
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -108,6 +148,12 @@ function EditorContent() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }));
   }, [nodes, edges]);
 
+  // Expose edges and nodes globally for trigger propagation
+  useEffect(() => {
+    window.__zyklusEdges = edges;
+    window.__zyklusNodes = nodes;
+  }, [edges, nodes]);
+
   // Track mouse position
   const mousePos = useRef({ x: 0, y: 0 });
 
@@ -119,17 +165,19 @@ function EditorContent() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Space key to open palette at cursor
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input/textarea
+      // Ignore if typing in an input/textarea/contentEditable
       if (
         e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
       ) {
         return;
       }
 
+      // Space: open palette
       if (e.code === 'Space' && !palette) {
         e.preventDefault();
         const { x, y } = mousePos.current;
@@ -145,7 +193,7 @@ function EditorContent() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [palette, screenToFlowPosition]);
+  }, [palette, screenToFlowPosition, setNodes]);
 
   const handleReset = useCallback(() => {
     if (confirm('Reset to default canvas? All changes will be lost.')) {
@@ -191,24 +239,28 @@ function EditorContent() {
   );
 
   const handleCompile = useCallback(async () => {
-    const code = compileGraph(nodes, edges);
-    setCompiledCode(code);
+    const result = compileGraph(nodes, edges);
 
-    // Hot reload: if playing, update the pattern
-    if (isPlaying && code) {
-      await playCode(code);
+    // Always query events to show squares
+    if (result.cleanCode) {
+      await queryEvents(result.cleanCode);
     }
 
-    return code;
+    // Hot reload: if playing, update the pattern
+    if (isPlaying && result.code) {
+      await playCode(result.code);
+    }
+
+    return result;
   }, [nodes, edges, isPlaying]);
 
   const handlePlay = useCallback(async () => {
     setIsLoading(true);
     try {
       await initAudio();
-      const code = await handleCompile();
-      if (code) {
-        await playCode(code);
+      const result = await handleCompile();
+      if (result.code) {
+        await playCode(result.code);
         setIsPlaying(true);
         setNodes((nds) =>
           nds.map((n) =>
@@ -371,11 +423,6 @@ function EditorContent() {
             Reset
           </button>
         </div>
-        {compiledCode && (
-          <code className="ml-4 px-3 py-1 bg-gray-800 rounded text-sm text-green-400">
-            {compiledCode}
-          </code>
-        )}
       </div>
 
       {/* Flow Editor */}
@@ -391,8 +438,6 @@ function EditorContent() {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           defaultEdgeOptions={{ type: 'gradient' }}
-          snapToGrid
-          snapGrid={[20, 20]}
           fitView
         >
           <Background color="#424A72" gap={20} />

@@ -12,7 +12,9 @@ const NODE_CATEGORIES = [
     label: 'Sources',
     nodes: [
       { type: 'value', label: 'Value' },
+      { type: 'slider', label: 'Slider' },
       { type: 'code', label: 'Code' },
+      { type: 'irand', label: 'Irand' },
     ],
   },
   {
@@ -20,6 +22,9 @@ const NODE_CATEGORIES = [
     nodes: [
       { type: 'sound', label: 'Sound' },
       { type: 'note', label: 'Note' },
+      { type: 'scale', label: 'Scale' },
+      { type: 'supersaw', label: 'Supersaw' },
+      { type: 'bank', label: 'Bank' },
     ],
   },
   {
@@ -27,6 +32,8 @@ const NODE_CATEGORIES = [
     nodes: [
       { type: 'array', label: 'Array' },
       { type: 'pick', label: 'Pick' },
+      { type: 'struct', label: 'Struct' },
+      { type: 'ribbon', label: 'Ribbon' },
     ],
   },
   {
@@ -35,6 +42,8 @@ const NODE_CATEGORIES = [
       { type: 'fast', label: 'Fast' },
       { type: 'slow', label: 'Slow' },
       { type: 'rev', label: 'Rev' },
+      { type: 'sub', label: 'Sub' },
+      { type: 'seg', label: 'Seg' },
     ],
   },
   {
@@ -44,11 +53,44 @@ const NODE_CATEGORIES = [
       { type: 'reverb', label: 'Reverb' },
       { type: 'delay', label: 'Delay' },
       { type: 'lpf', label: 'Low-pass' },
+      { type: 'lpq', label: 'LP Q' },
+      { type: 'lpenv', label: 'LP Env' },
+      { type: 'lpa', label: 'LP Attack' },
+      { type: 'lps', label: 'LP Sustain' },
+      { type: 'lpr', label: 'LP Release' },
+      { type: 'room', label: 'Room' },
+      { type: 'attack', label: 'Attack' },
+      { type: 'sustain', label: 'Sustain' },
+      { type: 'release', label: 'Release' },
+      { type: 'postgain', label: 'Postgain' },
+      { type: 'pcurve', label: 'Pcurve' },
+      { type: 'pdecay', label: 'Pdecay' },
+      { type: 'distort', label: 'Distort' },
+    ],
+  },
+  {
+    label: 'Routing',
+    nodes: [
+      { type: 'orbit', label: 'Orbit' },
+      { type: 'duckorbit', label: 'Duck' },
+      { type: 'duckattack', label: 'Duck Attack' },
+      { type: 'duckdepth', label: 'Duck Depth' },
     ],
   },
   {
     label: 'Output',
     nodes: [{ type: 'output', label: 'Output' }],
+  },
+  {
+    label: 'Global',
+    nodes: [{ type: 'cpm', label: 'CPM (Tempo)' }],
+  },
+  {
+    label: 'Variables',
+    nodes: [
+      { type: 'setVar', label: 'Set Var' },
+      { type: 'getVar', label: 'Get Var' },
+    ],
   },
 ];
 

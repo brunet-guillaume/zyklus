@@ -2,11 +2,13 @@ import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
 import type { CodeNode as CodeNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
+import { useEvents } from '../hooks/useEvents';
 
 export function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
   const { isTriggered: triggered } = useTrigger(id);
+  const events = useEvents();
 
   const outputErrorFn = (index: number) => {
     return !edges.some(
@@ -17,6 +19,8 @@ export function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>) {
   return (
     <BaseNode
       type="code"
+      nodeId={id}
+      events={events}
       label="Code"
       inputs={1}
       outputs={1}

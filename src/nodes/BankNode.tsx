@@ -1,12 +1,14 @@
 import { useEdges, useReactFlow, type NodeProps } from '@xyflow/react';
 import { BaseNode } from './BaseNode';
-import type { LpfNode as LpfNodeType } from './types';
 import { useTrigger } from '../hooks/useTrigger';
+import { useEvents } from '../hooks/useEvents';
+import type { BankNode as BankNodeType } from './types';
 
-export function LpfNode({ id, data, selected }: NodeProps<LpfNodeType>) {
+export function BankNode({ id, data, selected }: NodeProps<BankNodeType>) {
   const { updateNodeData } = useReactFlow();
   const edges = useEdges();
-  const { isTriggered: triggered } = useTrigger(id);
+  const { isTriggered } = useTrigger(id);
+  const events = useEvents();
 
   const inputErrorFn = (index: number) => {
     return !edges.some(
@@ -22,28 +24,24 @@ export function LpfNode({ id, data, selected }: NodeProps<LpfNodeType>) {
 
   return (
     <BaseNode
-      type="lpf"
-      label="Low-pass"
+      type="bank"
+      nodeId={id}
+      label="Bank"
+      events={events}
       inputs={1}
       outputs={1}
       selected={selected}
-      triggered={triggered}
+      triggered={isTriggered}
       inputErrorFn={inputErrorFn}
       outputErrorFn={outputErrorFn}
     >
-      <div className="auto-width-input">
-        <span>{data.value ?? ' '}</span>
-        <input
-          type="number"
-          value={data.value ?? 1000}
-          onChange={(e) =>
-            updateNodeData(id, { value: parseFloat(e.target.value) || 0 })
-          }
-          step="100"
-          min="20"
-          max="20000"
-        />
-      </div>
+      <input
+        type="text"
+        value={data.bank || ''}
+        onChange={(e) => updateNodeData(id, { bank: e.target.value })}
+        placeholder="RolandTR808"
+        className="w-full text-xs"
+      />
     </BaseNode>
   );
 }

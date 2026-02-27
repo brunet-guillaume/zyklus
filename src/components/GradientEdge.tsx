@@ -1,10 +1,10 @@
 import {
   BaseEdge,
-  getBezierPath,
+  getSmoothStepPath,
   useNodes,
   type EdgeProps,
 } from '@xyflow/react';
-import { useTrigger } from '../hooks/useTrigger';
+import { useEffect, useState, useRef } from 'react';
 
 export function GradientEdge({
   id,
@@ -23,27 +23,65 @@ export function GradientEdge({
   const nodes = useNodes();
   const sourceNode = nodes.find((n) => n.id === source);
   const targetNode = nodes.find((n) => n.id === target);
-  const { isTriggered: sourceTriggered } = useTrigger(source);
-  const { isTriggered: targetTriggered } = useTrigger(target);
 
-  const [edgePath] = getBezierPath({
+  // Track trigger state with direct event listener to avoid React batching issues
+  const [isTriggered, setIsTriggered] = useState(false);
+  const timeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleTrigger = (event: Event) => {
+      const customEvent = event as CustomEvent<{ nodeId: string }>;
+      const { nodeId } = customEvent.detail ?? {};
+
+      // Trigger when SOURCE triggers (data flows from source)
+      if (nodeId === source) {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+
+        setIsTriggered(true);
+
+        timeoutRef.current = window.setTimeout(() => {
+          setIsTriggered(false);
+        }, 150);
+      }
+    };
+
+    window.addEventListener('zyklus:trigger', handleTrigger);
+    return () => {
+      window.removeEventListener('zyklus:trigger', handleTrigger);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [source]);
+
+  const [edgePath] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
+    borderRadius: 8,
   });
 
   const gradientId = `gradient-${id}`;
-  const sourceColor = sourceNode?.type
-    ? `var(--${sourceNode.type})`
-    : '#818CF8';
-  const targetColor = targetNode?.type
-    ? `var(--${targetNode.type})`
-    : '#F472B6';
+  const sourceType = sourceNode?.type;
+  const targetType = targetNode?.type;
 
-  const isTriggered = sourceTriggered && targetTriggered;
+  const isActive = selected || isTriggered;
+  const sourceColor = isActive
+    ? sourceType
+      ? `var(--${sourceType})`
+      : '#818CF8'
+    : '#4B5563';
+  const targetColor = isActive
+    ? targetType
+      ? `var(--${targetType})`
+      : '#F472B6'
+    : '#6B7280';
+
   const strokeWidth = selected ? 3 : isTriggered ? 3.5 : 1;
 
   return (
@@ -79,7 +117,8 @@ export function GradientEdge({
           ...style,
           stroke: `url(#${gradientId})`,
           strokeWidth,
-          transition: 'stroke-width 0.3s ease-out',
+          opacity: 1,
+          transition: 'stroke-width 0.3s ease-out, opacity 0.3s ease-out',
         }}
         markerEnd={markerEnd}
       />
