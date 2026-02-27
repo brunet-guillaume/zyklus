@@ -143,6 +143,13 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      editableRef.current?.blur();
+    }
+  };
+
   return (
     <BaseNode
       type="value"
@@ -163,6 +170,7 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
           contentEditable
           onInput={handleInput}
           onDoubleClick={handleDoubleClick}
+          onKeyDown={handleKeyDown}
           className="input editable outline-none whitespace-pre"
         />
       </div>

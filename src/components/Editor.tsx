@@ -19,6 +19,7 @@ import {
   type AppNode,
   getDefaultData,
   getShortcutMap,
+  nodeDefinitions,
 } from '../nodes';
 import {
   compileGraph,
@@ -60,6 +61,41 @@ const initialEdges = (savedCanvas?.edges ?? defaultCanvas.edges) as Edge[];
 // Calculate initial nodeId from existing nodes
 let nodeId = Math.max(...initialNodes.map((n) => parseInt(n.id) || 0), 0) + 1;
 const getNodeId = () => `${nodeId++}`;
+
+// Constants matching BaseNode.tsx handle positioning
+const HANDLE_SPACING = 20;
+const TITLE_OFFSET = 4;
+
+// Calculate position for new node to align handles
+function getAlignedPosition(
+  selectedNode: AppNode,
+  selectedOutputs: number,
+  newInputs: number
+): { x: number; y: number } {
+  const selectedWidth = selectedNode.measured?.width ?? 100;
+  const selectedHeight = selectedNode.measured?.height ?? 40;
+
+  // X: 50px to the right of selected node
+  const x = selectedNode.position.x + selectedWidth + 50;
+
+  // Y: align first output handle with first input handle
+  // Output handle position (always 50% for single output)
+  const outputY =
+    selectedOutputs === 1
+      ? selectedHeight / 2
+      : TITLE_OFFSET + HANDLE_SPACING / 2;
+
+  // Input handle position (50% for single input without labels, else fixed)
+  // Since we don't know if new node has labels, assume 50% for single input
+  const inputY =
+    newInputs === 1
+      ? selectedHeight / 2 // Assume similar height, so use same offset
+      : TITLE_OFFSET + HANDLE_SPACING / 2;
+
+  const y = selectedNode.position.y + outputY - inputY;
+
+  return { x, y };
+}
 
 // Focus the first contentEditable input in a node after creation
 function focusNodeInput(nodeId: string, selectAll = false) {
@@ -200,17 +236,57 @@ function EditorContent() {
           const { x, y } = mousePos.current;
           const flowPos = screenToFlowPosition({ x, y });
           const id = getNodeId();
+
+          // Find selected node and check if auto-connect is possible
+          const selectedNode = nodes.find((n) => n.selected);
+          const newNodeDef =
+            nodeDefinitions[nodeType as keyof typeof nodeDefinitions];
+          const selectedNodeDef = selectedNode
+            ? nodeDefinitions[selectedNode.type as keyof typeof nodeDefinitions]
+            : null;
+
+          const canAutoConnect =
+            selectedNode &&
+            (selectedNodeDef?.outputs ?? 0) > 0 &&
+            newNodeDef?.inputs > 0;
+
+          // Position: right of selected node if auto-connecting, otherwise at cursor
+          const position = canAutoConnect
+            ? getAlignedPosition(
+                selectedNode,
+                selectedNodeDef?.outputs ?? 1,
+                newNodeDef?.inputs ?? 1
+              )
+            : { x: flowPos.x, y: flowPos.y };
+
           const newNode = {
             id,
             type: nodeType,
-            position: { x: flowPos.x, y: flowPos.y },
+            position,
             data: getDefaultData(nodeType),
             selected: true,
           } as AppNode;
+
           setNodes((nds) => [
             ...nds.map((n) => ({ ...n, selected: false })),
             newNode,
           ]);
+
+          // Auto-connect: selected node's first output -> new node's first input
+          if (canAutoConnect) {
+            setEdges((eds) =>
+              addEdge(
+                {
+                  source: selectedNode.id,
+                  sourceHandle: 'out-0',
+                  target: id,
+                  targetHandle: 'in-0',
+                },
+                eds
+              )
+            );
+          }
+
           focusNodeInput(id, true);
         }
 
@@ -224,7 +300,15 @@ function EditorContent() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [palette, contextMenu, screenToFlowPosition, setNodes, shortcutBuffer]);
+  }, [
+    palette,
+    contextMenu,
+    screenToFlowPosition,
+    setNodes,
+    setEdges,
+    nodes,
+    shortcutBuffer,
+  ]);
 
   const handleReset = useCallback(() => {
     if (confirm('Reset to default canvas? All changes will be lost.')) {
@@ -342,10 +426,32 @@ function EditorContent() {
       if (!contextMenu) return;
 
       const id = getNodeId();
+
+      // Find selected node and check if auto-connect is possible
+      const selectedNode = nodes.find((n) => n.selected);
+      const newNodeDef = nodeDefinitions[type as keyof typeof nodeDefinitions];
+      const selectedNodeDef = selectedNode
+        ? nodeDefinitions[selectedNode.type as keyof typeof nodeDefinitions]
+        : null;
+
+      const canAutoConnect =
+        selectedNode &&
+        (selectedNodeDef?.outputs ?? 0) > 0 &&
+        newNodeDef?.inputs > 0;
+
+      // Position: right of selected node if auto-connecting, otherwise at cursor
+      const position = canAutoConnect
+        ? getAlignedPosition(
+            selectedNode,
+            selectedNodeDef?.outputs ?? 1,
+            newNodeDef?.inputs ?? 1
+          )
+        : { x: contextMenu.flowX, y: contextMenu.flowY };
+
       const newNode = {
         id,
         type,
-        position: { x: contextMenu.flowX, y: contextMenu.flowY },
+        position,
         data: getDefaultData(type),
         selected: true,
       } as AppNode;
@@ -354,9 +460,25 @@ function EditorContent() {
         ...nds.map((n) => ({ ...n, selected: false })),
         newNode,
       ]);
+
+      // Auto-connect: selected node's first output -> new node's first input
+      if (canAutoConnect) {
+        setEdges((eds) =>
+          addEdge(
+            {
+              source: selectedNode.id,
+              sourceHandle: 'out-0',
+              target: id,
+              targetHandle: 'in-0',
+            },
+            eds
+          )
+        );
+      }
+
       focusNodeInput(id, true);
     },
-    [contextMenu, setNodes]
+    [contextMenu, setNodes, setEdges, nodes]
   );
 
   const handlePaletteSelect = useCallback(
@@ -364,10 +486,32 @@ function EditorContent() {
       if (!palette) return;
 
       const id = getNodeId();
+
+      // Find selected node and check if auto-connect is possible
+      const selectedNode = nodes.find((n) => n.selected);
+      const newNodeDef = nodeDefinitions[type as keyof typeof nodeDefinitions];
+      const selectedNodeDef = selectedNode
+        ? nodeDefinitions[selectedNode.type as keyof typeof nodeDefinitions]
+        : null;
+
+      const canAutoConnect =
+        selectedNode &&
+        (selectedNodeDef?.outputs ?? 0) > 0 &&
+        newNodeDef?.inputs > 0;
+
+      // Position: right of selected node if auto-connecting, otherwise at cursor
+      const position = canAutoConnect
+        ? getAlignedPosition(
+            selectedNode,
+            selectedNodeDef?.outputs ?? 1,
+            newNodeDef?.inputs ?? 1
+          )
+        : { x: palette.flowX, y: palette.flowY };
+
       const newNode = {
         id,
         type,
-        position: { x: palette.flowX, y: palette.flowY },
+        position,
         data: getDefaultData(type),
         selected: true,
       } as AppNode;
@@ -376,10 +520,26 @@ function EditorContent() {
         ...nds.map((n) => ({ ...n, selected: false })),
         newNode,
       ]);
+
+      // Auto-connect: selected node's first output -> new node's first input
+      if (canAutoConnect) {
+        setEdges((eds) =>
+          addEdge(
+            {
+              source: selectedNode.id,
+              sourceHandle: 'out-0',
+              target: id,
+              targetHandle: 'in-0',
+            },
+            eds
+          )
+        );
+      }
+
       setPalette(null);
       focusNodeInput(id, true);
     },
-    [palette, setNodes]
+    [palette, setNodes, setEdges, nodes]
   );
 
   const handleSave = useCallback(() => {

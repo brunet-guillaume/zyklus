@@ -57,7 +57,7 @@ function NumericInput({
   }, [onChange, min, max]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' || e.key === 'Escape') {
       e.preventDefault();
       ref.current?.blur();
     }

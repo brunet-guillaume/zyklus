@@ -49,6 +49,13 @@ export function ContentEditableInput({
     }
   }, []);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      ref.current?.blur();
+    }
+  }, []);
+
   return (
     <div className="auto-width-input text-xs">
       <span>{value || placeholder}</span>
@@ -57,6 +64,7 @@ export function ContentEditableInput({
         contentEditable
         onInput={handleInput}
         onDoubleClick={handleDoubleClick}
+        onKeyDown={handleKeyDown}
         data-placeholder={placeholder}
         className={`input editable outline-none whitespace-pre ${className}`}
       />
@@ -113,12 +121,20 @@ export function ContentEditableCode({
     }
   }, []);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      ref.current?.blur();
+    }
+  }, []);
+
   return (
     <div
       ref={ref}
       contentEditable
       onInput={handleInput}
       onDoubleClick={handleDoubleClick}
+      onKeyDown={handleKeyDown}
       data-placeholder={placeholder}
       className={`w-48 min-h-20 border-b text-xs font-mono whitespace-pre-wrap ${className}`}
     />
