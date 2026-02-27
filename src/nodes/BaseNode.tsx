@@ -1,5 +1,90 @@
 import { Handle, Position } from '@xyflow/react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, Children } from 'react';
+
+// ContentEditable numeric input component
+function NumericInput({
+  value,
+  onChange,
+  min,
+  max,
+  className = '',
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const lastValueRef = useRef(String(value));
+
+  useEffect(() => {
+    if (ref.current && String(value) !== lastValueRef.current) {
+      lastValueRef.current = String(value);
+      if (document.activeElement !== ref.current) {
+        ref.current.textContent = String(value);
+      }
+    }
+  }, [value]);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.textContent = String(value);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleInput = useCallback(() => {
+    if (ref.current) {
+      const text = ref.current.textContent || '';
+      lastValueRef.current = text;
+      const num = parseFloat(text);
+      if (!isNaN(num)) {
+        onChange(num);
+      }
+    }
+  }, [onChange]);
+
+  const handleBlur = useCallback(() => {
+    if (ref.current) {
+      let num = parseFloat(ref.current.textContent || '') || 0;
+      if (min !== undefined) num = Math.max(min, num);
+      if (max !== undefined) num = Math.min(max, num);
+      lastValueRef.current = String(num);
+      ref.current.textContent = String(num);
+      onChange(num);
+    }
+  }, [onChange, min, max]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      ref.current?.blur();
+    }
+  }, []);
+
+  const handleDoubleClick = useCallback(() => {
+    if (ref.current) {
+      const range = document.createRange();
+      range.selectNodeContents(ref.current);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      contentEditable
+      onInput={handleInput}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      onDoubleClick={handleDoubleClick}
+      className={className}
+    />
+  );
+}
 
 interface EventLocation {
   start: number;
@@ -235,7 +320,14 @@ export function BaseNode({
       }
       onDoubleClick={
         slider
-          ? () => {
+          ? (e) => {
+              // Don't toggle panel if double-clicking on a contentEditable
+              if (
+                e.target instanceof HTMLElement &&
+                e.target.isContentEditable
+              ) {
+                return;
+              }
               const newExpanded = !expanded;
               setExpanded(newExpanded);
               onExpandedChange?.(newExpanded);
@@ -302,18 +394,12 @@ export function BaseNode({
       )}
       {slider && !isSlider && !isInput && (
         <div className="content">
-          <input
-            className="w-full"
-            type="number"
+          <NumericInput
             value={slider.value}
-            onChange={(e) => slider.onChange(parseFloat(e.target.value) || 0)}
-            onBlur={(e) => {
-              const val = parseFloat(e.target.value) || 0;
-              const clamped = Math.min(Math.max(val, slider.min), slider.max);
-              slider.onChange(clamped);
-            }}
+            onChange={slider.onChange}
             min={slider.min}
             max={slider.max}
+            className="w-full text-center"
           />
         </div>
       )}
@@ -340,7 +426,9 @@ export function BaseNode({
         </div>
       )}
 
-      {children && <div className="content">{children}</div>}
+      {Children.toArray(children).filter(Boolean).length > 0 && (
+        <div className="content">{children}</div>
+      )}
 
       {expanded && (
         <div className="tools">
@@ -383,40 +471,32 @@ export function BaseNode({
           )}
           {slider && (
             <div className="flex gap-2 mt-1 text-xs text-center w-full bg-white/3 rounded-md p-1">
-              <label className="flex flex-col gap-0.5 flex-1">
+              <div className="flex flex-col gap-0.5 flex-1">
                 <span className="opacity-50">Min</span>
-                <input
-                  type="number"
+                <NumericInput
                   value={slider.min}
-                  onChange={(e) =>
-                    slider.onMinChange?.(parseFloat(e.target.value) || 0)
-                  }
-                  className="w-full bg-black/30 rounded px-1 py-0.5 text-center"
+                  onChange={(v) => slider.onMinChange?.(v)}
+                  className="w-full bg-black/30! px-1! py-0.5! text-center"
                 />
-              </label>
-              <label className="flex flex-col gap-0.5 flex-1">
+              </div>
+              <div className="flex flex-col gap-0.5 flex-1">
                 <span className="opacity-50">Max</span>
-                <input
-                  type="number"
+                <NumericInput
                   value={slider.max}
-                  onChange={(e) =>
-                    slider.onMaxChange?.(parseFloat(e.target.value) || 0)
-                  }
-                  className="w-full bg-black/30 rounded px-1 py-0.5 text-center"
+                  onChange={(v) => slider.onMaxChange?.(v)}
+                  className="w-full bg-black/30! px-1! py-0.5! text-center"
                 />
-              </label>
+              </div>
               {(isSlider || sliderOnly) && (
-                <label className="flex flex-col gap-0.5 flex-1">
+                <div className="flex flex-col gap-0.5 flex-1">
                   <span className="opacity-50">Step</span>
-                  <input
-                    type="number"
+                  <NumericInput
                     value={slider.step ?? 1}
-                    onChange={(e) =>
-                      slider.onStepChange?.(parseFloat(e.target.value) || 1)
-                    }
-                    className="w-full bg-black/30 rounded px-1 py-0.5 text-center"
+                    onChange={(v) => slider.onStepChange?.(v)}
+                    min={0.001}
+                    className="w-full bg-black/30! px-1! py-0.5! text-center"
                   />
-                </label>
+                </div>
               )}
             </div>
           )}

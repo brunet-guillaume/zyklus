@@ -133,6 +133,16 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
     }
   };
 
+  const handleDoubleClick = () => {
+    if (editableRef.current) {
+      const range = document.createRange();
+      range.selectNodeContents(editableRef.current);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+  };
+
   return (
     <BaseNode
       type="value"
@@ -152,6 +162,7 @@ export function ValueNode({ id, data, selected }: NodeProps<ValueNodeType>) {
           ref={editableRef}
           contentEditable
           onInput={handleInput}
+          onDoubleClick={handleDoubleClick}
           className="input editable outline-none whitespace-pre"
         />
       </div>

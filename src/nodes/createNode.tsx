@@ -8,6 +8,10 @@ import {
   type NodeDefinition,
 } from './nodeDefinitions';
 import type { SliderNodeData } from './types';
+import {
+  ContentEditableInput,
+  ContentEditableCode,
+} from './ContentEditableInputs';
 
 interface GenericNodeData {
   value?: number;
@@ -127,27 +131,24 @@ export function createNode(type: NodeType) {
       type === 'output' ? data.isPlaying && triggered : triggered;
 
     // Build text input element if defined
-    const textInputElement = def.textInput && (
-      <input
-        type="text"
+    const textInputElement = def.textInput ? (
+      <ContentEditableInput
         value={(data[def.textInput.dataKey] as string) || ''}
-        onChange={(e) =>
-          updateNodeData(id, { [def.textInput!.dataKey]: e.target.value })
+        onChange={(text) =>
+          updateNodeData(id, { [def.textInput!.dataKey]: text })
         }
         placeholder={def.textInput.placeholder}
-        className="w-full text-xs"
       />
-    );
+    ) : null;
 
     // Build code editor element if defined
-    const codeEditorElement = def.codeEditor && (
-      <textarea
+    const codeEditorElement = def.codeEditor ? (
+      <ContentEditableCode
         value={data.code || ''}
-        onChange={(e) => updateNodeData(id, { code: e.target.value })}
-        className="w-48 h-20 bg-(--background) rounded px-2 py-1 border-b text-xs font-mono focus:outline-none resize-none"
+        onChange={(text) => updateNodeData(id, { code: text })}
         placeholder={def.codeEditor.placeholder}
       />
-    );
+    ) : null;
 
     return (
       <BaseNode

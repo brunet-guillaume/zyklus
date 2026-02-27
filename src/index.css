@@ -24,6 +24,17 @@ body {
     sans-serif;
 }
 
+/* Global contentEditable styling - matches .auto-width-input > .editable */
+[contenteditable] {
+  @apply outline-none bg-black/30 rounded px-2 py-1 border-b-2 text-xs;
+  caret-color: var(--node-color, var(--foreground));
+}
+
+[contenteditable]:empty::before {
+  content: attr(data-placeholder);
+  @apply text-gray-500;
+}
+
 /* Remove default React Flow node styles */
 .react-flow__node {
   @apply pointer-events-none! bg-transparent! border-0! p-0! shadow-none!;
@@ -128,7 +139,7 @@ body {
 
 .node .content input,
 .node .content .input {
-  @apply outline-none bg-black/30 rounded px-2 py-1 border-b text-xs;
+  @apply outline-none bg-black/30 rounded px-2 py-1 border-b-2 text-xs;
 }
 
 /* Hide number input arrows */

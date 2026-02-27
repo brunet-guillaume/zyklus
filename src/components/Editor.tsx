@@ -61,6 +61,34 @@ const initialEdges = (savedCanvas?.edges ?? defaultCanvas.edges) as Edge[];
 let nodeId = Math.max(...initialNodes.map((n) => parseInt(n.id) || 0), 0) + 1;
 const getNodeId = () => `${nodeId++}`;
 
+// Focus the first contentEditable input in a node after creation
+function focusNodeInput(nodeId: string, selectAll = false) {
+  // Use setTimeout to ensure React has rendered the node
+  setTimeout(() => {
+    // React Flow uses data-id on the node wrapper
+    const nodeEl = document.querySelector(
+      `.react-flow__node[data-id="${nodeId}"]`
+    );
+    if (!nodeEl) return;
+
+    // Find the first contentEditable element
+    const el = nodeEl.querySelector(
+      '[contenteditable="true"]'
+    ) as HTMLElement | null;
+    if (el) {
+      el.focus();
+      // Optionally select all content for easy replacement
+      if (selectAll) {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+    }
+  }, 50);
+}
+
 function EditorContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -103,6 +131,10 @@ function EditorContent() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  // Shortcut buffer for multi-character shortcuts (Shift + keys)
+  const [shortcutBuffer, setShortcutBuffer] = useState<string>('');
+  const isShiftHeld = useRef(false);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -129,25 +161,70 @@ function EditorContent() {
         return;
       }
 
-      // Node shortcuts: create node at mouse position
-      const nodeType = SHORTCUT_MAP.get(e.key.toLowerCase());
-      if (nodeType && !palette && !contextMenu) {
+      // Track Shift key for multi-character shortcuts
+      if (e.key === 'Shift') {
+        isShiftHeld.current = true;
+        setShortcutBuffer('');
+        return;
+      }
+
+      // Build shortcut buffer while Shift is held
+      if (
+        isShiftHeld.current &&
+        e.key.length === 1 &&
+        !palette &&
+        !contextMenu
+      ) {
         e.preventDefault();
-        const { x, y } = mousePos.current;
-        const flowPos = screenToFlowPosition({ x, y });
-        const newNode = {
-          id: getNodeId(),
-          type: nodeType,
-          position: { x: flowPos.x, y: flowPos.y },
-          data: getDefaultData(nodeType),
-        } as AppNode;
-        setNodes((nds) => [...nds, newNode]);
+        setShortcutBuffer((prev) => prev + e.key.toLowerCase());
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // Ignore if typing in an input/textarea/contentEditable
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
+      ) {
+        return;
+      }
+
+      // On Shift release, check the buffer for a matching shortcut
+      if (e.key === 'Shift' && isShiftHeld.current) {
+        isShiftHeld.current = false;
+
+        // Look up the shortcut
+        const nodeType = SHORTCUT_MAP.get(shortcutBuffer);
+        if (nodeType && !palette && !contextMenu) {
+          const { x, y } = mousePos.current;
+          const flowPos = screenToFlowPosition({ x, y });
+          const id = getNodeId();
+          const newNode = {
+            id,
+            type: nodeType,
+            position: { x: flowPos.x, y: flowPos.y },
+            data: getDefaultData(nodeType),
+            selected: true,
+          } as AppNode;
+          setNodes((nds) => [
+            ...nds.map((n) => ({ ...n, selected: false })),
+            newNode,
+          ]);
+          focusNodeInput(id, true);
+        }
+
+        setShortcutBuffer('');
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [palette, contextMenu, screenToFlowPosition, setNodes]);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [palette, contextMenu, screenToFlowPosition, setNodes, shortcutBuffer]);
 
   const handleReset = useCallback(() => {
     if (confirm('Reset to default canvas? All changes will be lost.')) {
@@ -264,14 +341,20 @@ function EditorContent() {
     (type: string) => {
       if (!contextMenu) return;
 
+      const id = getNodeId();
       const newNode = {
-        id: getNodeId(),
+        id,
         type,
         position: { x: contextMenu.flowX, y: contextMenu.flowY },
         data: getDefaultData(type),
+        selected: true,
       } as AppNode;
 
-      setNodes((nds) => [...nds, newNode]);
+      setNodes((nds) => [
+        ...nds.map((n) => ({ ...n, selected: false })),
+        newNode,
+      ]);
+      focusNodeInput(id, true);
     },
     [contextMenu, setNodes]
   );
@@ -280,15 +363,21 @@ function EditorContent() {
     (type: string) => {
       if (!palette) return;
 
+      const id = getNodeId();
       const newNode = {
-        id: getNodeId(),
+        id,
         type,
         position: { x: palette.flowX, y: palette.flowY },
         data: getDefaultData(type),
+        selected: true,
       } as AppNode;
 
-      setNodes((nds) => [...nds, newNode]);
+      setNodes((nds) => [
+        ...nds.map((n) => ({ ...n, selected: false })),
+        newNode,
+      ]);
       setPalette(null);
+      focusNodeInput(id, true);
     },
     [palette, setNodes]
   );
@@ -415,6 +504,16 @@ function EditorContent() {
           onSelect={handlePaletteSelect}
           onClose={() => setPalette(null)}
         />
+      )}
+
+      {/* Shortcut indicator */}
+      {shortcutBuffer && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 border border-purple-500 rounded-lg px-4 py-2 z-50 shadow-xl">
+          <span className="text-gray-400 text-sm mr-2">Shortcut:</span>
+          <span className="text-purple-400 font-mono text-lg">
+            {shortcutBuffer}
+          </span>
+        </div>
       )}
     </div>
   );
