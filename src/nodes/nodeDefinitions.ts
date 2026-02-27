@@ -23,14 +23,78 @@ export type DataTypeKey =
   | 'distort'
   | 'standaloneSlider';
 
-// Compilation patterns
-export type CompilePattern =
-  | { type: 'transform'; method: string } // .method(paramValue) - uses slider value
-  | { type: 'transformNoParam'; method: string } // .method() - no parameter
-  | { type: 'transformFixed'; method: string; arg: string } // .method("fixedArg")
-  | { type: 'passthrough' } // just pass code through (output)
-  | { type: 'global'; method: string } // standalone, inserted at start of code
-  | { type: 'custom' }; // needs custom logic in compiler
+// === Compilation Types ===
+
+// Node info for trigger chain
+export type NodeInfo = { id: string; type: string };
+
+// Build result from compilation
+export type BuildResult = {
+  code: string;
+  sourceType: string;
+  dataNodes: NodeInfo[];
+};
+
+// Input data for compilation
+export interface CompileInput {
+  handle: string;
+  code: string;
+  sourceType: string;
+  dataNodes: NodeInfo[];
+}
+
+// Context passed to compile functions
+export interface CompileContext {
+  nodeId: string;
+  nodeType: string;
+  data: Record<string, unknown>;
+  inputs: CompileInput[];
+  includeTriggers: boolean;
+  // Helper functions
+  getInput: (handle: string) => CompileInput | undefined;
+  getParamValue: () => string | number;
+  makeTrigger: () => string;
+  allDataNodes: () => NodeInfo[];
+}
+
+// Compile function type - can return full result or just code string
+export type CompileFunction = (ctx: CompileContext) => BuildResult | string;
+
+// Global compile function (for cpm, setVar - inserted at start)
+export type GlobalCompileFunction = (ctx: CompileContext) => string | null;
+
+// Marker format for value nodes (invisible markers around node ID)
+export const MARKER_START = '\u0002';
+export const MARKER_END = '\u0003';
+
+// === Helper functions for compile ===
+
+// Simple transform: input.method(paramValue)
+const transform =
+  (method: string): CompileFunction =>
+  (ctx) => {
+    const input = ctx.getInput('in-0');
+    if (!input) return { code: '', sourceType: '', dataNodes: [] };
+    return `${input.code}.${method}(${ctx.getParamValue()})`;
+  };
+
+// Transform without parameter: input.method()
+const transformNoParam =
+  (method: string): CompileFunction =>
+  (ctx) => {
+    const input = ctx.getInput('in-0');
+    if (!input) return { code: '', sourceType: '', dataNodes: [] };
+    return `${input.code}.${method}()`;
+  };
+
+// Transform with fixed argument: input.method("arg")
+const transformFixed =
+  (method: string, arg: string): CompileFunction =>
+  (ctx) => {
+    const input = ctx.getInput('in-0');
+    if (!input) return { code: '', sourceType: '', dataNodes: [] };
+    return `${input.code}.${method}("${arg}")`;
+  };
 
 export interface NodeDefinition {
   label: string;
@@ -42,7 +106,12 @@ export interface NodeDefinition {
   className?: string;
   inputLabels?: string[];
   slider?: SliderDefaults;
-  compile: CompilePattern;
+
+  // === Compilation ===
+  // Main compile function - builds code for this node
+  compile: CompileFunction;
+  // Global compile function - for nodes that insert code at start (cpm, setVar)
+  compileGlobal?: GlobalCompileFunction;
 
   // === UI Options ===
   // Text input field (for var name, bank name, scale, etc.)
@@ -68,7 +137,14 @@ export const nodeDefinitions = {
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => {
+      const input = ctx.getInput('in-0');
+      return {
+        code: input ? `${input.code}.s()` : '"bd".s()',
+        sourceType: 'sound',
+        dataNodes: ctx.allDataNodes(),
+      };
+    },
   },
   note: {
     label: 'Note',
@@ -78,7 +154,14 @@ export const nodeDefinitions = {
     outputs: 1,
     modeOutput: true,
     className: 'w-20',
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => {
+      const input = ctx.getInput('in-0');
+      return {
+        code: input ? `note(${input.code})` : 'note("c3")',
+        sourceType: 'note',
+        dataNodes: ctx.allDataNodes(),
+      };
+    },
   },
 
   // === Transform nodes ===
@@ -96,7 +179,7 @@ export const nodeDefinitions = {
       step: 0.5,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'transform', method: 'fast' } as const,
+    compile: transform('fast'),
   },
   slow: {
     label: 'Slow',
@@ -112,7 +195,7 @@ export const nodeDefinitions = {
       step: 0.5,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'slow' } as const,
+    compile: transform('slow'),
   },
   rev: {
     label: 'Rev',
@@ -121,7 +204,7 @@ export const nodeDefinitions = {
     inputs: 1,
     outputs: 1,
     modeOutput: true,
-    compile: { type: 'transformNoParam', method: 'rev' } as const,
+    compile: transformNoParam('rev'),
   },
 
   // === Synth nodes ===
@@ -133,11 +216,7 @@ export const nodeDefinitions = {
     outputs: 1,
     modeOutput: true,
     className: 'w-20',
-    compile: {
-      type: 'transformFixed',
-      method: 'sound',
-      arg: 'supersaw',
-    } as const,
+    compile: transformFixed('sound', 'supersaw'),
   },
 
   // === Effect nodes ===
@@ -155,7 +234,7 @@ export const nodeDefinitions = {
       step: 0.1,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'transform', method: 'gain' } as const,
+    compile: transform('gain'),
   },
   reverb: {
     label: 'Reverb',
@@ -171,7 +250,7 @@ export const nodeDefinitions = {
       step: 0.1,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'transform', method: 'room' } as const, // Strudel uses .room() for reverb
+    compile: transform('room'), // Strudel uses .room() for reverb
   },
   delay: {
     label: 'Delay',
@@ -187,7 +266,7 @@ export const nodeDefinitions = {
       step: 0.1,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'transform', method: 'delay' } as const,
+    compile: transform('delay'),
   },
   lpf: {
     label: 'Low-pass',
@@ -203,7 +282,7 @@ export const nodeDefinitions = {
       step: 100,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'lpf' } as const,
+    compile: transform('lpf'),
   },
   lpenv: {
     label: 'LP Env',
@@ -219,7 +298,7 @@ export const nodeDefinitions = {
       step: 0.1,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'lpenv' } as const,
+    compile: transform('lpenv'),
   },
   lpq: {
     label: 'LP Q',
@@ -235,7 +314,7 @@ export const nodeDefinitions = {
       step: 0.5,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'lpq' } as const,
+    compile: transform('lpq'),
   },
   lpa: {
     label: 'LP Attack',
@@ -251,7 +330,7 @@ export const nodeDefinitions = {
       step: 0.01,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'lpa' } as const,
+    compile: transform('lpa'),
   },
   lps: {
     label: 'LP Sustain',
@@ -267,7 +346,7 @@ export const nodeDefinitions = {
       step: 0.05,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'lps' } as const,
+    compile: transform('lps'),
   },
   lpr: {
     label: 'LP Release',
@@ -283,7 +362,7 @@ export const nodeDefinitions = {
       step: 0.05,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'lpr' } as const,
+    compile: transform('lpr'),
   },
   room: {
     label: 'Room',
@@ -299,7 +378,7 @@ export const nodeDefinitions = {
       step: 0.05,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'transform', method: 'room' } as const,
+    compile: transform('room'),
   },
 
   // === ADSR Envelope nodes ===
@@ -317,7 +396,7 @@ export const nodeDefinitions = {
       step: 0.01,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'transform', method: 'attack' } as const,
+    compile: transform('attack'),
   },
   sustain: {
     label: 'Sustain',
@@ -333,7 +412,7 @@ export const nodeDefinitions = {
       step: 0.05,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'transform', method: 'sustain' } as const,
+    compile: transform('sustain'),
   },
   release: {
     label: 'Release',
@@ -349,7 +428,7 @@ export const nodeDefinitions = {
       step: 0.05,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'transform', method: 'release' } as const,
+    compile: transform('release'),
   },
 
   // === Parameter nodes ===
@@ -367,7 +446,7 @@ export const nodeDefinitions = {
       step: 0.1,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'transform', method: 'postgain' } as const,
+    compile: transform('postgain'),
   },
   pcurve: {
     label: 'Pcurve',
@@ -383,7 +462,7 @@ export const nodeDefinitions = {
       step: 0.1,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'transform', method: 'pcurve' } as const,
+    compile: transform('pcurve'),
   },
   pdecay: {
     label: 'Pdecay',
@@ -399,7 +478,7 @@ export const nodeDefinitions = {
       step: 0.01,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'transform', method: 'pdecay' } as const,
+    compile: transform('pdecay'),
   },
 
   // === Structural nodes ===
@@ -410,7 +489,18 @@ export const nodeDefinitions = {
     inputs: 3,
     outputs: 1,
     inputLabels: ['pattern', 'offset', 'cycles'],
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => {
+      const pattern = ctx.getInput('in-0');
+      const offset = ctx.getInput('in-1');
+      const cycles = ctx.getInput('in-2');
+      if (!pattern || !offset || !cycles)
+        return { code: '', sourceType: '', dataNodes: [] };
+      return {
+        code: `${pattern.code}.ribbon(${offset.code}, ${cycles.code})`,
+        sourceType: 'ribbon',
+        dataNodes: ctx.allDataNodes(),
+      };
+    },
   },
   pick: {
     label: 'Pick',
@@ -419,7 +509,17 @@ export const nodeDefinitions = {
     inputs: 2,
     outputs: 1,
     inputLabels: ['values', 'indices'],
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => {
+      const values = ctx.getInput('in-0');
+      const indices = ctx.getInput('in-1');
+      if (!values || !indices)
+        return { code: '', sourceType: '', dataNodes: [] };
+      return {
+        code: `pick(${values.code}, ${indices.code})`,
+        sourceType: 'pick',
+        dataNodes: ctx.allDataNodes(),
+      };
+    },
   },
   struct: {
     label: 'Struct',
@@ -428,7 +528,17 @@ export const nodeDefinitions = {
     inputs: 2,
     outputs: 1,
     inputLabels: ['pattern', 'struct'],
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => {
+      const pattern = ctx.getInput('in-0');
+      const struct = ctx.getInput('in-1');
+      if (!pattern || !struct)
+        return { code: '', sourceType: '', dataNodes: [] };
+      return {
+        code: `${pattern.code}.struct(${struct.code})`,
+        sourceType: 'struct',
+        dataNodes: ctx.allDataNodes(),
+      };
+    },
   },
 
   // === Distortion ===
@@ -438,7 +548,17 @@ export const nodeDefinitions = {
     dataType: 'distort',
     inputs: 1,
     outputs: 1,
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => {
+      const input = ctx.getInput('in-0');
+      if (!input) return { code: '', sourceType: '', dataNodes: [] };
+      const amount = (ctx.data.amount as number) ?? 2;
+      const postgain = (ctx.data.postgain as number) ?? 0.5;
+      const mode = (ctx.data.mode as string) || '';
+      const distortArg = mode
+        ? `"${amount}:${postgain}:${mode}"`
+        : `"${amount}:${postgain}"`;
+      return `${input.code}.distort(${distortArg})`;
+    },
   },
 
   // === Routing nodes ===
@@ -456,7 +576,7 @@ export const nodeDefinitions = {
       step: 1,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'orbit' } as const,
+    compile: transform('orbit'),
   },
   duckorbit: {
     label: 'Duck',
@@ -472,7 +592,7 @@ export const nodeDefinitions = {
       step: 1,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'duckorbit' } as const,
+    compile: transform('duckorbit'),
   },
   duckattack: {
     label: 'Duck Att',
@@ -488,7 +608,7 @@ export const nodeDefinitions = {
       step: 0.01,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'duckattack' } as const,
+    compile: transform('duckattack'),
   },
   duckdepth: {
     label: 'Duck Depth',
@@ -504,7 +624,7 @@ export const nodeDefinitions = {
       step: 0.05,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'duckdepth' } as const,
+    compile: transform('duckdepth'),
   },
 
   // === Output node ===
@@ -516,7 +636,15 @@ export const nodeDefinitions = {
     outputs: 0,
     modeOutput: true,
     className: 'w-20',
-    compile: { type: 'passthrough' } as const,
+    compile: (ctx) => {
+      const input = ctx.getInput('in-0');
+      if (!input) return { code: '', sourceType: '', dataNodes: [] };
+      return {
+        code: `${input.code}${ctx.makeTrigger()}`,
+        sourceType: input.sourceType,
+        dataNodes: [],
+      };
+    },
   },
 
   // === Global nodes (standalone, inserted at start) ===
@@ -534,7 +662,15 @@ export const nodeDefinitions = {
       step: 1,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'global', method: 'setCpm' } as const,
+    compile: () => ({ code: '', sourceType: '', dataNodes: [] }),
+    compileGlobal: (ctx) => {
+      const value = ctx.getParamValue();
+      // Store CPM globally for animation duration calculations
+      if (typeof value === 'number') {
+        window.__zyklusCpm = value;
+      }
+      return `setCpm(${value})`;
+    },
   },
 
   // === Bank node ===
@@ -545,7 +681,12 @@ export const nodeDefinitions = {
     inputs: 1,
     outputs: 1,
     textInput: { placeholder: 'RolandTR808', dataKey: 'bank' },
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => {
+      const input = ctx.getInput('in-0');
+      if (!input) return { code: '', sourceType: '', dataNodes: [] };
+      const bankName = (ctx.data.bank as string) || 'RolandTR808';
+      return `${input.code}.bank("${bankName}")`;
+    },
   },
 
   // === Pattern generator nodes ===
@@ -563,7 +704,11 @@ export const nodeDefinitions = {
       step: 1,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => ({
+      code: `irand(${ctx.getParamValue()})`,
+      sourceType: 'irand',
+      dataNodes: [],
+    }),
   },
   sub: {
     label: 'Sub',
@@ -579,7 +724,7 @@ export const nodeDefinitions = {
       step: 1,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'sub' } as const,
+    compile: transform('sub'),
   },
   seg: {
     label: 'Seg',
@@ -595,7 +740,7 @@ export const nodeDefinitions = {
       step: 1,
       defaultMode: 'value' as const,
     },
-    compile: { type: 'transform', method: 'seg' } as const,
+    compile: transform('seg'),
   },
   scale: {
     label: 'Scale',
@@ -605,7 +750,12 @@ export const nodeDefinitions = {
     outputs: 1,
     modeOutput: true,
     textInput: { placeholder: 'c:minor', dataKey: 'scale' },
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => {
+      const input = ctx.getInput('in-0');
+      if (!input) return { code: '', sourceType: '', dataNodes: [] };
+      const scaleName = (ctx.data.scale as string) || 'c:minor';
+      return `${input.code}.scale("${scaleName}")`;
+    },
   },
 
   // === Variable nodes ===
@@ -616,7 +766,13 @@ export const nodeDefinitions = {
     inputs: 1,
     outputs: 0,
     textInput: { placeholder: 'var name', dataKey: 'name' },
-    compile: { type: 'custom' } as const,
+    compile: () => ({ code: '', sourceType: '', dataNodes: [] }),
+    compileGlobal: (ctx) => {
+      const varName = (ctx.data.name as string) || 'unnamed';
+      const input = ctx.getInput('in-0');
+      if (!input) return null;
+      return `(window.__zyklusVars = window.__zyklusVars || {}, window.__zyklusVars['${varName}'] = ${input.code})`;
+    },
   },
   getVar: {
     label: 'Get',
@@ -625,7 +781,14 @@ export const nodeDefinitions = {
     inputs: 0,
     outputs: 1,
     textInput: { placeholder: 'var name', dataKey: 'name' },
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => {
+      const varName = (ctx.data.name as string) || 'unnamed';
+      return {
+        code: `window.__zyklusVars?.['${varName}']`,
+        sourceType: 'var',
+        dataNodes: [],
+      };
+    },
   },
 
   // === Special nodes ===
@@ -644,7 +807,11 @@ export const nodeDefinitions = {
       step: 1,
       defaultMode: 'slider' as const,
     },
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => ({
+      code: `signal(() => window.__zyklusSliders?.['${ctx.nodeId}'] ?? ${(ctx.data.value as number) ?? 50})`,
+      sourceType: 'slider',
+      dataNodes: [{ id: ctx.nodeId, type: 'slider' }],
+    }),
   },
   value: {
     label: 'Value',
@@ -652,7 +819,12 @@ export const nodeDefinitions = {
     dataType: 'value',
     inputs: 0,
     outputs: 1,
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => ({
+      // Marker before quote: \x02id\x03"content"
+      code: `${MARKER_START}${ctx.nodeId}${MARKER_END}"${ctx.data.value}"`,
+      sourceType: 'value',
+      dataNodes: [{ id: ctx.nodeId, type: 'value' }],
+    }),
   },
   array: {
     label: 'Array',
@@ -661,7 +833,18 @@ export const nodeDefinitions = {
     inputs: 1,
     outputs: 1,
     dynamicInputs: true,
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => {
+      const sorted = [...ctx.inputs].sort((a, b) => {
+        const aIdx = parseInt(a.handle.split('-')[1] || '0');
+        const bIdx = parseInt(b.handle.split('-')[1] || '0');
+        return aIdx - bIdx;
+      });
+      return {
+        code: `[${sorted.map((s) => s.code).join(', ')}]`,
+        sourceType: 'array',
+        dataNodes: ctx.allDataNodes(),
+      };
+    },
   },
   code: {
     label: 'Code',
@@ -670,9 +853,13 @@ export const nodeDefinitions = {
     inputs: 1,
     outputs: 1,
     codeEditor: { placeholder: 'note("c3 e3 g3")' },
-    compile: { type: 'custom' } as const,
+    compile: (ctx) => ({
+      code: `(${ctx.data.code})`,
+      sourceType: 'code',
+      dataNodes: ctx.allDataNodes(),
+    }),
   },
-} as const satisfies Record<string, NodeDefinition>;
+} satisfies Record<string, NodeDefinition>;
 
 export type NodeType = keyof typeof nodeDefinitions;
 
