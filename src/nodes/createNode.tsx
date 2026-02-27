@@ -11,6 +11,8 @@ import type { SliderNodeData } from './types';
 import {
   ContentEditableInput,
   ContentEditableCode,
+  HighlightableInput,
+  FieldsRenderer,
 } from './ContentEditableInputs';
 
 interface GenericNodeData {
@@ -150,6 +152,27 @@ export function createNode(type: NodeType) {
       />
     ) : null;
 
+    // Build highlightable input element if defined (for Value node)
+    const highlightableElement = def.highlightable ? (
+      <HighlightableInput
+        nodeId={id}
+        value={(data[def.highlightable.dataKey] as string) || ''}
+        onChange={(text) =>
+          updateNodeData(id, { [def.highlightable!.dataKey]: text })
+        }
+        placeholder={def.highlightable.placeholder}
+      />
+    ) : null;
+
+    // Build fields element if defined (for Distort node)
+    const fieldsElement = def.fields ? (
+      <FieldsRenderer
+        fields={def.fields}
+        data={data}
+        updateData={(updates) => updateNodeData(id, updates)}
+      />
+    ) : null;
+
     return (
       <BaseNode
         type={type}
@@ -170,6 +193,8 @@ export function createNode(type: NodeType) {
       >
         {textInputElement}
         {codeEditorElement}
+        {highlightableElement}
+        {fieldsElement}
       </BaseNode>
     );
   }

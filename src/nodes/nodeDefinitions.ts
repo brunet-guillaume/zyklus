@@ -96,6 +96,21 @@ const transformFixed =
     return `${input.code}.${method}("${arg}")`;
   };
 
+// === Field definitions for multi-field nodes (like Distort) ===
+export interface FieldDefinition {
+  key: string; // Key in data (e.g., 'amount')
+  label: string; // Display label (e.g., 'Amount')
+  type: 'number' | 'select';
+  // For type 'number':
+  min?: number;
+  max?: number;
+  step?: number;
+  defaultValue?: number;
+  // For type 'select':
+  options?: { value: string; label: string }[];
+  defaultOption?: string;
+}
+
 export interface NodeDefinition {
   label: string;
   color: string;
@@ -135,6 +150,13 @@ export interface NodeDefinition {
   dynamicInputs?: boolean;
   // Standalone slider (no mode switcher, always shows slider)
   sliderOnly?: boolean;
+  // Highlightable text input with real-time character highlighting (for Value node)
+  highlightable?: {
+    dataKey: string; // Key in data (e.g., 'value')
+    placeholder: string; // Placeholder text
+  };
+  // Multi-field form (for Distort node and similar)
+  fields?: FieldDefinition[];
 }
 
 export const nodeDefinitions = {
@@ -635,6 +657,42 @@ export const nodeDefinitions = {
     dataType: 'distort',
     inputs: 1,
     outputs: 1,
+    defaultData: { amount: 2, postgain: 0.5, mode: '' },
+    fields: [
+      {
+        key: 'amount',
+        label: 'Amount',
+        type: 'number',
+        min: 0,
+        defaultValue: 2,
+      },
+      {
+        key: 'postgain',
+        label: 'Post',
+        type: 'number',
+        min: 0,
+        max: 1,
+        defaultValue: 0.5,
+      },
+      {
+        key: 'mode',
+        label: 'Mode',
+        type: 'select',
+        defaultOption: '',
+        options: [
+          { value: '', label: 'default' },
+          { value: 'scurve', label: 'scurve' },
+          { value: 'soft', label: 'soft' },
+          { value: 'hard', label: 'hard' },
+          { value: 'cubic', label: 'cubic' },
+          { value: 'diode', label: 'diode' },
+          { value: 'asym', label: 'asym' },
+          { value: 'fold', label: 'fold' },
+          { value: 'sinefold', label: 'sinefold' },
+          { value: 'chebyshev', label: 'chebyshev' },
+        ],
+      },
+    ],
     compile: (ctx) => {
       const input = ctx.getInput('in-0');
       if (!input) return { code: '', sourceType: '', dataNodes: [] };
@@ -956,6 +1014,10 @@ export const nodeDefinitions = {
     inputs: 0,
     outputs: 1,
     defaultData: { value: 'c3' },
+    highlightable: {
+      dataKey: 'value',
+      placeholder: 'c3',
+    },
     compile: (ctx) => ({
       // Marker before quote: \x02id\x03"content"
       code: `${MARKER_START}${ctx.nodeId}${MARKER_END}"${ctx.data.value}"`,
