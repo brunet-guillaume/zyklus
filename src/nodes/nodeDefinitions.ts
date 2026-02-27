@@ -182,7 +182,7 @@ export const nodeDefinitions = {
   fast: {
     label: 'Fast',
     color: '#60a5fa',
-    menuPath: 'Transform',
+    menuPath: 'Transform/Time',
     description: 'Speed up the pattern by a factor',
     shortcut: 'f',
     dataType: 'slider',
@@ -201,7 +201,7 @@ export const nodeDefinitions = {
   slow: {
     label: 'Slow',
     color: '#a78bfa',
-    menuPath: 'Transform',
+    menuPath: 'Transform/Time',
     description: 'Slow down the pattern by a factor',
     shortcut: 'w',
     dataType: 'slider',
@@ -220,7 +220,7 @@ export const nodeDefinitions = {
   rev: {
     label: 'Rev',
     color: '#f472b6',
-    menuPath: 'Transform',
+    menuPath: 'Transform/Time',
     description: 'Reverse the pattern',
     shortcut: 'r',
     dataType: 'simple',
@@ -235,6 +235,7 @@ export const nodeDefinitions = {
     label: 'Supersaw',
     color: '#e879f9',
     menuPath: 'Generators',
+    description: 'Detuned sawtooth synth sound',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -247,7 +248,7 @@ export const nodeDefinitions = {
   gain: {
     label: 'Gain',
     color: '#4ade80',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Volume',
     description: 'Adjust the volume level',
     shortcut: 'g',
     dataType: 'slider',
@@ -266,7 +267,7 @@ export const nodeDefinitions = {
   reverb: {
     label: 'Reverb',
     color: '#22c55e',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Space',
     description: 'Add reverb/room effect',
     dataType: 'slider',
     inputs: 1,
@@ -284,7 +285,7 @@ export const nodeDefinitions = {
   delay: {
     label: 'Delay',
     color: '#16a34a',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Space',
     description: 'Add echo/delay effect',
     shortcut: 'd',
     dataType: 'slider',
@@ -303,7 +304,7 @@ export const nodeDefinitions = {
   lpf: {
     label: 'Low-pass',
     color: '#15803d',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Filter',
     description: 'Low-pass filter cutoff frequency',
     shortcut: 'l',
     dataType: 'slider',
@@ -322,7 +323,8 @@ export const nodeDefinitions = {
   lpenv: {
     label: 'LP Env',
     color: '#166534',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Filter',
+    description: 'Filter envelope depth',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -339,7 +341,8 @@ export const nodeDefinitions = {
   lpq: {
     label: 'LP Q',
     color: '#047857',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Filter',
+    description: 'Filter resonance/Q factor',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -356,7 +359,8 @@ export const nodeDefinitions = {
   lpa: {
     label: 'LP Attack',
     color: '#0d9488',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Filter',
+    description: 'Filter envelope attack time',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -373,7 +377,8 @@ export const nodeDefinitions = {
   lps: {
     label: 'LP Sustain',
     color: '#0891b2',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Filter',
+    description: 'Filter envelope sustain level',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -390,7 +395,8 @@ export const nodeDefinitions = {
   lpr: {
     label: 'LP Release',
     color: '#0e7490',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Filter',
+    description: 'Filter envelope release time',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -407,7 +413,8 @@ export const nodeDefinitions = {
   room: {
     label: 'Room',
     color: '#059669',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Space',
+    description: 'Room size for reverb effect',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -426,7 +433,8 @@ export const nodeDefinitions = {
   attack: {
     label: 'Attack',
     color: '#f43f5e',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Envelope',
+    description: 'Amplitude attack time',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -443,7 +451,8 @@ export const nodeDefinitions = {
   sustain: {
     label: 'Sustain',
     color: '#ec4899',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Envelope',
+    description: 'Amplitude sustain level',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -460,7 +469,8 @@ export const nodeDefinitions = {
   release: {
     label: 'Release',
     color: '#d946ef',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Envelope',
+    description: 'Amplitude release time',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -479,7 +489,8 @@ export const nodeDefinitions = {
   postgain: {
     label: 'Postgain',
     color: '#84cc16',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Volume',
+    description: 'Output gain after effects',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -496,7 +507,8 @@ export const nodeDefinitions = {
   pcurve: {
     label: 'Pcurve',
     color: '#06b6d4',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Envelope',
+    description: 'Envelope curve shape',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -513,7 +525,8 @@ export const nodeDefinitions = {
   pdecay: {
     label: 'Pdecay',
     color: '#0891b2',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Envelope',
+    description: 'Pitch envelope decay time',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -533,6 +546,7 @@ export const nodeDefinitions = {
     label: 'Ribbon',
     color: '#f43f5e',
     menuPath: 'Collections',
+    description: 'Offset pattern by cycles',
     dataType: 'simple',
     inputs: 3,
     outputs: 1,
@@ -554,6 +568,7 @@ export const nodeDefinitions = {
     label: 'Pick',
     color: '#22d3ee',
     menuPath: 'Collections',
+    description: 'Pick values by index pattern',
     dataType: 'simple',
     inputs: 2,
     outputs: 1,
@@ -575,6 +590,7 @@ export const nodeDefinitions = {
     label: 'Struct',
     color: '#14b8a6',
     menuPath: 'Collections',
+    description: 'Apply rhythmic structure to pattern',
     dataType: 'simple',
     inputs: 2,
     outputs: 1,
@@ -596,7 +612,8 @@ export const nodeDefinitions = {
   distort: {
     label: 'Distort',
     color: '#dc2626',
-    menuPath: 'Effects',
+    menuPath: 'Effects/Distortion',
+    description: 'Add distortion/saturation effect',
     dataType: 'distort',
     inputs: 1,
     outputs: 1,
@@ -618,6 +635,7 @@ export const nodeDefinitions = {
     label: 'Orbit',
     color: '#7c3aed',
     menuPath: 'Routing',
+    description: 'Route to effect bus/channel',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -635,6 +653,7 @@ export const nodeDefinitions = {
     label: 'Duck',
     color: '#6d28d9',
     menuPath: 'Routing',
+    description: 'Sidechain duck target orbit',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -652,6 +671,7 @@ export const nodeDefinitions = {
     label: 'Duck Att',
     color: '#5b21b6',
     menuPath: 'Routing',
+    description: 'Sidechain duck attack time',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -669,6 +689,7 @@ export const nodeDefinitions = {
     label: 'Duck Depth',
     color: '#4c1d95',
     menuPath: 'Routing',
+    description: 'Sidechain duck amount',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -712,6 +733,7 @@ export const nodeDefinitions = {
     label: 'CPM',
     color: '#f97316',
     menuPath: 'Global',
+    description: 'Cycles per minute (tempo)',
     dataType: 'slider',
     inputs: 0,
     outputs: 0,
@@ -739,6 +761,7 @@ export const nodeDefinitions = {
     label: 'Bank',
     color: '#f472b6',
     menuPath: 'Generators',
+    description: 'Sample bank/kit selection',
     dataType: 'bank',
     inputs: 1,
     outputs: 1,
@@ -757,6 +780,7 @@ export const nodeDefinitions = {
     label: 'Irand',
     color: '#06b6d4',
     menuPath: 'Sources',
+    description: 'Random integer generator',
     dataType: 'slider',
     inputs: 0,
     outputs: 1,
@@ -777,7 +801,8 @@ export const nodeDefinitions = {
   sub: {
     label: 'Sub',
     color: '#14b8a6',
-    menuPath: 'Transform',
+    menuPath: 'Transform/Modify',
+    description: 'Subtract value from pattern',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -794,7 +819,8 @@ export const nodeDefinitions = {
   seg: {
     label: 'Seg',
     color: '#8b5cf6',
-    menuPath: 'Transform',
+    menuPath: 'Transform/Modify',
+    description: 'Segment pattern into steps',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -812,6 +838,7 @@ export const nodeDefinitions = {
     label: 'Scale',
     color: '#ec4899',
     menuPath: 'Generators',
+    description: 'Apply musical scale to pattern',
     dataType: 'scale',
     inputs: 1,
     outputs: 1,
@@ -830,6 +857,7 @@ export const nodeDefinitions = {
     label: 'Set',
     color: '#8b5cf6',
     menuPath: 'Variables',
+    description: 'Store pattern in a variable',
     dataType: 'var',
     inputs: 1,
     outputs: 0,
@@ -847,6 +875,7 @@ export const nodeDefinitions = {
     label: 'Get',
     color: '#a78bfa',
     menuPath: 'Variables',
+    description: 'Retrieve pattern from variable',
     dataType: 'var',
     inputs: 0,
     outputs: 1,
@@ -962,9 +991,15 @@ export interface NodeOption {
   shortcut?: string;
 }
 
-export interface NodeCategory {
+export interface NodeSubcategory {
   label: string;
   nodes: NodeOption[];
+}
+
+export interface NodeCategory {
+  label: string;
+  nodes: NodeOption[]; // Direct nodes (no subcategory)
+  subcategories: NodeSubcategory[]; // Nested subcategories
 }
 
 // Order of categories in the context menu
@@ -997,30 +1032,57 @@ export function getNodeOptions(): NodeOption[] {
 
 /**
  * Get categorized node options (for ContextMenu)
+ * Supports nested paths like "Effects/Filter"
  */
 export function getNodeCategories(): NodeCategory[] {
-  const categories = new Map<string, NodeOption[]>();
+  // Build nested structure: category -> subcategory -> nodes
+  const tree = new Map<
+    string,
+    { direct: NodeOption[]; subs: Map<string, NodeOption[]> }
+  >();
 
   // Group nodes by menuPath
   Object.entries(nodeDefinitions).forEach(([type, def]) => {
     const d = def as NodeDefinition;
     const path = d.menuPath || 'Other';
-    if (!categories.has(path)) {
-      categories.set(path, []);
+    const parts = path.split('/');
+    const category = parts[0];
+    const subcategory = parts[1];
+
+    if (!tree.has(category)) {
+      tree.set(category, { direct: [], subs: new Map() });
     }
-    categories.get(path)!.push({
+
+    const node: NodeOption = {
       type,
       label: d.label,
       description: d.description,
       shortcut: d.shortcut,
-    });
+    };
+
+    if (subcategory) {
+      const subs = tree.get(category)!.subs;
+      if (!subs.has(subcategory)) {
+        subs.set(subcategory, []);
+      }
+      subs.get(subcategory)!.push(node);
+    } else {
+      tree.get(category)!.direct.push(node);
+    }
   });
 
-  // Sort categories by defined order
-  return CATEGORY_ORDER.filter((cat) => categories.has(cat)).map((cat) => ({
-    label: cat,
-    nodes: categories.get(cat)!,
-  }));
+  // Convert to array sorted by CATEGORY_ORDER
+  return CATEGORY_ORDER.filter((cat) => tree.has(cat)).map((cat) => {
+    const data = tree.get(cat)!;
+    return {
+      label: cat,
+      nodes: data.direct,
+      subcategories: Array.from(data.subs.entries()).map(([label, nodes]) => ({
+        label,
+        nodes,
+      })),
+    };
+  });
 }
 
 /**

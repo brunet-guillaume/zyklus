@@ -11,14 +11,14 @@ interface NodePaletteProps {
   onClose: () => void;
 }
 
-export function NodePalette({ x, y, onSelect, onClose }: NodePaletteProps) {
+export function NodePalette({ onSelect, onClose }: NodePaletteProps) {
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const filtered = NODE_OPTIONS.filter((opt) =>
     opt.label.toLowerCase().includes(search.toLowerCase())
-  );
+  ).sort((a, b) => a.label.localeCompare(b.label));
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -49,10 +49,7 @@ export function NodePalette({ x, y, onSelect, onClose }: NodePaletteProps) {
   return (
     <>
       <div className="fixed inset-0" onClick={onClose} />
-      <div
-        className="fixed bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-2 z-50 min-w-48"
-        style={{ left: x, top: y }}
-      >
+      <div className="fixed bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-2 z-50 w-1/2 left-1/4 top-1/2">
         <input
           ref={inputRef}
           type="text"
@@ -67,28 +64,45 @@ export function NodePalette({ x, y, onSelect, onClose }: NodePaletteProps) {
             <button
               key={option.type}
               onClick={() => onSelect(option.type)}
-              title={option.description}
-              className={`w-full px-3 py-1.5 text-left text-sm rounded flex justify-between items-center ${
+              className={`w-full px-3 py-1.5 text-left text-sm rounded ${
                 index === selectedIndex
                   ? 'bg-purple-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700'
+                  : 'hover:bg-gray-700'
               }`}
-              style={{
-                color:
-                  index === selectedIndex ? 'white' : `var(--${option.type})`,
-              }}
             >
-              <span>{option.label}</span>
-              {option.shortcut && (
+              <div className="flex justify-between items-center">
                 <span
-                  className={`text-xs ml-2 px-1 rounded ${
+                  style={{
+                    color:
+                      index === selectedIndex
+                        ? 'white'
+                        : `var(--${option.type})`,
+                  }}
+                >
+                  {option.label}
+                </span>
+                {option.shortcut && (
+                  <span
+                    className={`text-xs ml-2 px-1 rounded ${
+                      index === selectedIndex
+                        ? 'bg-purple-500 text-purple-100'
+                        : 'bg-gray-700 text-gray-400'
+                    }`}
+                  >
+                    {option.shortcut}
+                  </span>
+                )}
+              </div>
+              {option.description && (
+                <div
+                  className={`text-xs mt-0.5 ${
                     index === selectedIndex
-                      ? 'bg-purple-500 text-purple-100'
-                      : 'bg-gray-700 text-gray-400'
+                      ? 'text-purple-200'
+                      : 'text-gray-500'
                   }`}
                 >
-                  {option.shortcut}
-                </span>
+                  {option.description}
+                </div>
               )}
             </button>
           ))}
