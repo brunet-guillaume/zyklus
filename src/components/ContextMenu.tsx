@@ -74,7 +74,12 @@ export function ContextMenu({ x, y, onClose, onAddNode }: ContextMenuProps) {
 }
 
 interface SubmenuProps {
-  nodes: { type: string; label: string }[];
+  nodes: {
+    type: string;
+    label: string;
+    shortcut?: string;
+    description?: string;
+  }[];
   onSelect: (type: string) => void;
 }
 
@@ -85,10 +90,16 @@ function Submenu({ nodes, onSelect }: SubmenuProps) {
         <button
           key={node.type}
           onClick={() => onSelect(node.type)}
-          className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700"
+          title={node.description}
+          className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 flex justify-between items-center"
           style={{ color: `var(--${node.type})` }}
         >
-          {node.label}
+          <span>{node.label}</span>
+          {node.shortcut && (
+            <span className="text-xs ml-2 px-1 rounded bg-gray-700 text-gray-400">
+              {node.shortcut}
+            </span>
+          )}
         </button>
       ))}
     </div>

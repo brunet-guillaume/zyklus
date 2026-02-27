@@ -67,7 +67,8 @@ export function NodePalette({ x, y, onSelect, onClose }: NodePaletteProps) {
             <button
               key={option.type}
               onClick={() => onSelect(option.type)}
-              className={`w-full px-3 py-1.5 text-left text-sm rounded ${
+              title={option.description}
+              className={`w-full px-3 py-1.5 text-left text-sm rounded flex justify-between items-center ${
                 index === selectedIndex
                   ? 'bg-purple-600 text-white'
                   : 'text-gray-300 hover:bg-gray-700'
@@ -77,7 +78,18 @@ export function NodePalette({ x, y, onSelect, onClose }: NodePaletteProps) {
                   index === selectedIndex ? 'white' : `var(--${option.type})`,
               }}
             >
-              {option.label}
+              <span>{option.label}</span>
+              {option.shortcut && (
+                <span
+                  className={`text-xs ml-2 px-1 rounded ${
+                    index === selectedIndex
+                      ? 'bg-purple-500 text-purple-100'
+                      : 'bg-gray-700 text-gray-400'
+                  }`}
+                >
+                  {option.shortcut}
+                </span>
+              )}
             </button>
           ))}
           {filtered.length === 0 && (

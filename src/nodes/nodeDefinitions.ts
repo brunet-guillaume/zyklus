@@ -112,6 +112,8 @@ export interface NodeDefinition {
 
   // === Menu ===
   menuPath?: string; // Category path for context menu (e.g. "Effects", "Transform")
+  description?: string; // Tooltip description
+  shortcut?: string; // Keyboard shortcut (single letter)
 
   // === Compilation ===
   // Main compile function - builds code for this node
@@ -141,6 +143,8 @@ export const nodeDefinitions = {
     label: 'Sound',
     color: '#ffa577',
     menuPath: 'Generators',
+    description: 'Play a sample from the input pattern',
+    shortcut: 's',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -157,6 +161,8 @@ export const nodeDefinitions = {
     label: 'Note',
     color: '#71d7ca',
     menuPath: 'Generators',
+    description: 'Play a melodic note pattern',
+    shortcut: 'n',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -177,6 +183,8 @@ export const nodeDefinitions = {
     label: 'Fast',
     color: '#60a5fa',
     menuPath: 'Transform',
+    description: 'Speed up the pattern by a factor',
+    shortcut: 'f',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -194,6 +202,8 @@ export const nodeDefinitions = {
     label: 'Slow',
     color: '#a78bfa',
     menuPath: 'Transform',
+    description: 'Slow down the pattern by a factor',
+    shortcut: 'w',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -211,6 +221,8 @@ export const nodeDefinitions = {
     label: 'Rev',
     color: '#f472b6',
     menuPath: 'Transform',
+    description: 'Reverse the pattern',
+    shortcut: 'r',
     dataType: 'simple',
     inputs: 1,
     outputs: 1,
@@ -236,6 +248,8 @@ export const nodeDefinitions = {
     label: 'Gain',
     color: '#4ade80',
     menuPath: 'Effects',
+    description: 'Adjust the volume level',
+    shortcut: 'g',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -253,6 +267,7 @@ export const nodeDefinitions = {
     label: 'Reverb',
     color: '#22c55e',
     menuPath: 'Effects',
+    description: 'Add reverb/room effect',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -270,6 +285,8 @@ export const nodeDefinitions = {
     label: 'Delay',
     color: '#16a34a',
     menuPath: 'Effects',
+    description: 'Add echo/delay effect',
+    shortcut: 'd',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -287,6 +304,8 @@ export const nodeDefinitions = {
     label: 'Low-pass',
     color: '#15803d',
     menuPath: 'Effects',
+    description: 'Low-pass filter cutoff frequency',
+    shortcut: 'l',
     dataType: 'slider',
     inputs: 1,
     outputs: 1,
@@ -669,6 +688,8 @@ export const nodeDefinitions = {
     label: 'Output',
     color: '#fb923c',
     menuPath: 'Output',
+    description: 'Audio output - plays the pattern',
+    shortcut: 'o',
     dataType: 'output',
     inputs: 1,
     outputs: 0,
@@ -846,6 +867,7 @@ export const nodeDefinitions = {
     label: 'Slider',
     color: '#f59e0b',
     menuPath: 'Sources',
+    description: 'Real-time controllable value',
     dataType: 'standaloneSlider',
     inputs: 0,
     outputs: 1,
@@ -868,6 +890,8 @@ export const nodeDefinitions = {
     label: 'Value',
     color: '#fbbf24',
     menuPath: 'Sources',
+    description: 'Text pattern value (notes, samples...)',
+    shortcut: 'v',
     dataType: 'value',
     inputs: 0,
     outputs: 1,
@@ -883,6 +907,8 @@ export const nodeDefinitions = {
     label: 'Array',
     color: '#818cf8',
     menuPath: 'Collections',
+    description: 'Combine multiple values into an array',
+    shortcut: 'a',
     dataType: 'array',
     inputs: 1,
     outputs: 1,
@@ -905,6 +931,8 @@ export const nodeDefinitions = {
     label: 'Code',
     color: '#34d399',
     menuPath: 'Sources',
+    description: 'Write custom Strudel code',
+    shortcut: 'c',
     dataType: 'code',
     inputs: 1,
     outputs: 1,
@@ -930,6 +958,8 @@ export function getNodeDefinition(type: string): NodeDefinition | undefined {
 export interface NodeOption {
   type: string;
   label: string;
+  description?: string;
+  shortcut?: string;
 }
 
 export interface NodeCategory {
@@ -954,10 +984,15 @@ const CATEGORY_ORDER = [
  * Get flat list of all node options (for NodePalette search)
  */
 export function getNodeOptions(): NodeOption[] {
-  return Object.entries(nodeDefinitions).map(([type, def]) => ({
-    type,
-    label: def.label,
-  }));
+  return Object.entries(nodeDefinitions).map(([type, def]) => {
+    const d = def as NodeDefinition;
+    return {
+      type,
+      label: d.label,
+      description: d.description,
+      shortcut: d.shortcut,
+    };
+  });
 }
 
 /**
@@ -968,11 +1003,17 @@ export function getNodeCategories(): NodeCategory[] {
 
   // Group nodes by menuPath
   Object.entries(nodeDefinitions).forEach(([type, def]) => {
-    const path = def.menuPath || 'Other';
+    const d = def as NodeDefinition;
+    const path = d.menuPath || 'Other';
     if (!categories.has(path)) {
       categories.set(path, []);
     }
-    categories.get(path)!.push({ type, label: def.label });
+    categories.get(path)!.push({
+      type,
+      label: d.label,
+      description: d.description,
+      shortcut: d.shortcut,
+    });
   });
 
   // Sort categories by defined order
@@ -980,6 +1021,20 @@ export function getNodeCategories(): NodeCategory[] {
     label: cat,
     nodes: categories.get(cat)!,
   }));
+}
+
+/**
+ * Get map of keyboard shortcuts to node types
+ */
+export function getShortcutMap(): Map<string, string> {
+  const map = new Map<string, string>();
+  Object.entries(nodeDefinitions).forEach(([type, def]) => {
+    const d = def as NodeDefinition;
+    if (d.shortcut) {
+      map.set(d.shortcut.toLowerCase(), type);
+    }
+  });
+  return map;
 }
 
 /**

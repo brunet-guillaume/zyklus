@@ -14,7 +14,12 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { nodeTypes, type AppNode, getDefaultData } from '../nodes';
+import {
+  nodeTypes,
+  type AppNode,
+  getDefaultData,
+  getShortcutMap,
+} from '../nodes';
 import {
   compileGraph,
   initAudio,
@@ -30,6 +35,9 @@ import defaultCanvas from '../default-canvas.json';
 const edgeTypes = {
   gradient: GradientEdge,
 };
+
+// Shortcut map: key -> node type
+const SHORTCUT_MAP = getShortcutMap();
 
 const STORAGE_KEY = 'zyklus-canvas';
 
@@ -118,12 +126,28 @@ function EditorContent() {
           flowX: flowPos.x,
           flowY: flowPos.y,
         });
+        return;
+      }
+
+      // Node shortcuts: create node at mouse position
+      const nodeType = SHORTCUT_MAP.get(e.key.toLowerCase());
+      if (nodeType && !palette && !contextMenu) {
+        e.preventDefault();
+        const { x, y } = mousePos.current;
+        const flowPos = screenToFlowPosition({ x, y });
+        const newNode = {
+          id: getNodeId(),
+          type: nodeType,
+          position: { x: flowPos.x, y: flowPos.y },
+          data: getDefaultData(nodeType),
+        } as AppNode;
+        setNodes((nds) => [...nds, newNode]);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [palette, screenToFlowPosition, setNodes]);
+  }, [palette, contextMenu, screenToFlowPosition, setNodes]);
 
   const handleReset = useCallback(() => {
     if (confirm('Reset to default canvas? All changes will be lost.')) {

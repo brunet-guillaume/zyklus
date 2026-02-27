@@ -20,6 +20,7 @@ export {
   getDefaultData,
   getNodeOptions,
   getNodeCategories,
+  getShortcutMap,
   type NodeType,
   type NodeOption,
   type NodeCategory,
