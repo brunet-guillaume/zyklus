@@ -397,7 +397,6 @@ export function FieldsRenderer({
               onChange={(v) => updateData({ [field.key]: v })}
               min={field.min}
               max={field.max}
-              className="w-16 bg-black/30! px-1! py-0.5!"
             />
           )}
           {field.type === 'select' && (

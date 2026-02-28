@@ -929,12 +929,20 @@ export const nodeDefinitions = {
     inputs: 1,
     outputs: 1,
     modeOutput: true,
-    textInput: { placeholder: 'c:minor', dataKey: 'scale' },
+    //textInput: { placeholder: 'c:minor', dataKey: 'scale' },
+    highlightable: {
+      dataKey: 'scale',
+      placeholder: 'c:minor',
+    },
     compile: (ctx) => {
       const input = ctx.getInput('in-0');
       if (!input) return { code: '', sourceType: '', dataNodes: [] };
       const scaleName = (ctx.data.scale as string) || 'c:minor';
-      return `${input.code}.scale("${scaleName}")`;
+      return {
+        code: `${input.code}.scale(${MARKER_START}${ctx.nodeId}${MARKER_END}"${scaleName}")`,
+        sourceType: input.sourceType,
+        dataNodes: [...input.dataNodes, { id: ctx.nodeId, type: 'scale' }],
+      };
     },
   },
 

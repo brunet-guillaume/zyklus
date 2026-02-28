@@ -142,6 +142,29 @@ function dispatchTrigger(hap?: Hap) {
           }
         }, delay);
       }
+
+      // Propagate trigger to all ancestors (upstream) with negative delay (earlier)
+      const ancestors = getAncestors(matchedNodeId);
+
+      for (const { id, depth } of ancestors) {
+        // Ancestors trigger slightly before (negative delay not possible, so use 0)
+        // Or we could use a small delay to show the wave going upstream
+        const delay = depth * 10; // Smaller delay for upstream
+
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('zyklus:trigger', {
+              detail: {
+                nodeId: id,
+                nodeType: 'ancestor',
+                timing,
+                note,
+                hap,
+              },
+            })
+          );
+        }, delay);
+      }
     }
   }
 }
@@ -182,6 +205,34 @@ function getDescendants(nodeId: string): Array<{ id: string; depth: number }> {
   }
 
   return descendants;
+}
+
+// Get all ancestors of a node with their depth (nodes connected to its inputs, recursively)
+function getAncestors(nodeId: string): Array<{ id: string; depth: number }> {
+  const edges = window.__zyklusEdges;
+  if (!edges) return [];
+
+  const ancestors: Array<{ id: string; depth: number }> = [];
+  const visited = new Set<string>();
+  const queue: Array<{ id: string; depth: number }> = [
+    { id: nodeId, depth: 0 },
+  ];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current.id)) continue;
+    visited.add(current.id);
+
+    // Find all nodes connected to current's inputs
+    for (const edge of edges) {
+      if (edge.target !== current.id || visited.has(edge.source)) continue;
+
+      ancestors.push({ id: edge.source, depth: current.depth + 1 });
+      queue.push({ id: edge.source, depth: current.depth + 1 });
+    }
+  }
+
+  return ancestors;
 }
 
 export async function initAudio() {

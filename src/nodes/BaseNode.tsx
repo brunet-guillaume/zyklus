@@ -1,5 +1,94 @@
 import { Handle, Position } from '@xyflow/react';
-import { useEffect, useState, useRef, useCallback, Children } from 'react';
+import {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  Children,
+  useMemo,
+} from 'react';
+
+// Custom slider component
+function CustomSlider({
+  value,
+  min,
+  max,
+  step = 1,
+  onChange,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  onChange: (value: number) => void;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const progress = useMemo(() => {
+    return ((value - min) / (max - min)) * 100;
+  }, [value, min, max]);
+
+  const updateValue = useCallback(
+    (clientX: number) => {
+      if (!trackRef.current) return;
+      const rect = trackRef.current.getBoundingClientRect();
+      const percent = Math.max(
+        0,
+        Math.min(1, (clientX - rect.left) / rect.width)
+      );
+      let newValue = min + percent * (max - min);
+      // Snap to step
+      newValue = Math.round(Math.round(newValue / step) * step * 100) / 100;
+      // Clamp to bounds
+      newValue = Math.max(min, Math.min(max, newValue));
+      onChange(newValue);
+    },
+    [min, max, step, onChange]
+  );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+      updateValue(e.clientX);
+    },
+    [updateValue]
+  );
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      updateValue(e.clientX);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, updateValue]);
+
+  return (
+    <div className="input mb-2">
+      <div
+        ref={trackRef}
+        className="custom-slider nodrag -my-2"
+        onMouseDown={handleMouseDown}
+      >
+        <div className="track" />
+        <div className="fill" style={{ width: `${progress}%` }} />
+        <div className="thumb" style={{ left: `${progress}%` }} />
+      </div>
+    </div>
+  );
+}
 
 // ContentEditable numeric input component
 function NumericInput({
@@ -364,24 +453,21 @@ export function BaseNode({
         </div>
       )}
 
-      {label && <div className="title">{label}</div>}
+      {label && (
+        <div className="title">
+          <span>{label}</span>
+        </div>
+      )}
 
       {/* Optional slider or input based on mode */}
       {slider && isSlider && !isInput && (
         <div className="content w-full">
-          <input
-            type="range"
+          <CustomSlider
+            value={slider.value}
             min={slider.min}
             max={slider.max}
             step={slider.step ?? 1}
-            value={slider.value}
-            onChange={(e) => slider.onChange(parseFloat(e.target.value))}
-            className="w-full nodrag"
-            style={
-              {
-                '--slider-progress': `${((slider.value - slider.min) / (slider.max - slider.min)) * 100}%`,
-              } as React.CSSProperties
-            }
+            onChange={slider.onChange}
           />
           <div className="grid grid-cols-3 w-full text-xs -mt-1">
             <span className="opacity-70">{slider.min}</span>
