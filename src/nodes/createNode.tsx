@@ -50,6 +50,7 @@ export function createNode(type: NodeType) {
     const edges = useEdges();
     const { isTriggered: triggered } = useTrigger(id);
     const events = useEvents();
+    const isEnabled = (data.enabled ?? true) as boolean;
 
     // Calculate dynamic inputs if enabled
     let inputCount = def.inputs;
@@ -176,6 +177,7 @@ export function createNode(type: NodeType) {
     return (
       <BaseNode
         type={type}
+        enabled={isEnabled}
         nodeId={id}
         events={events}
         label={def.label}

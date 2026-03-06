@@ -194,6 +194,7 @@ interface SliderConfig {
 
 interface BaseNodeProps {
   type: string;
+  enabled: boolean;
   nodeId?: string; // For listening to triggers
   events?: EventLocation[]; // Event timing locations
   label?: string;
@@ -223,6 +224,7 @@ interface BaseNodeProps {
 
 export function BaseNode({
   type,
+  enabled,
   nodeId,
   events = [],
   label,
@@ -397,7 +399,7 @@ export function BaseNode({
 
   return (
     <div
-      className={`node relative ${type} ${selected ? 'selected' : ''} ${triggered ? 'triggered' : ''} ${className}`}
+      className={`node relative ${type} ${enabled ? (selected ? 'selected' : '') : ''} ${enabled ? (triggered ? 'triggered' : '') : ''} ${className} ${enabled ? '' : 'opacity-20'}`}
       style={
         {
           '--border-gradient': borderGradient,

@@ -143,7 +143,7 @@ function EditorContent() {
     flowY: number;
   } | null>(null);
   const flowRef = useRef<HTMLDivElement>(null);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, updateNodeData } = useReactFlow();
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -195,6 +195,14 @@ function EditorContent() {
           flowY: flowPos.y,
         });
         return;
+      }
+
+      // e: Toggle node enabled
+      if (e.key === 'e') {
+        const selectedNodes = nodes.filter((n) => n.selected);
+        selectedNodes.forEach((n) => {
+          updateNodeData(n.id, { enabled: !n.data.enabled });
+        });
       }
 
       // Track Shift key for multi-character shortcuts
@@ -308,6 +316,7 @@ function EditorContent() {
     setEdges,
     nodes,
     shortcutBuffer,
+    updateNodeData,
   ]);
 
   const handleReset = useCallback(() => {

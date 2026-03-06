@@ -69,13 +69,19 @@ export const MARKER_END = '\u0003';
 
 // === Helper functions for compile ===
 
+// Helper to wrap code in comment if node is disabled
+const maybeComment = (code: string, enabled: boolean) =>
+  enabled ? code : `/*${code}*/`;
+
 // Simple transform: input.method(paramValue)
 const transform =
   (method: string): CompileFunction =>
   (ctx) => {
     const input = ctx.getInput('in-0');
     if (!input) return { code: '', sourceType: '', dataNodes: [] };
-    return `${input.code}.${method}(${ctx.getParamValue()})`;
+    const enabled = ctx.data.enabled !== false;
+    const part = `.${method}(${ctx.getParamValue()})`;
+    return `${input.code}${maybeComment(part, enabled)}`;
   };
 
 // Transform without parameter: input.method()
@@ -84,7 +90,9 @@ const transformNoParam =
   (ctx) => {
     const input = ctx.getInput('in-0');
     if (!input) return { code: '', sourceType: '', dataNodes: [] };
-    return `${input.code}.${method}()`;
+    const enabled = ctx.data.enabled !== false;
+    const part = `.${method}()`;
+    return `${input.code}${maybeComment(part, enabled)}`;
   };
 
 // Transform with fixed argument: input.method("arg")
@@ -93,7 +101,9 @@ const transformFixed =
   (ctx) => {
     const input = ctx.getInput('in-0');
     if (!input) return { code: '', sourceType: '', dataNodes: [] };
-    return `${input.code}.${method}("${arg}")`;
+    const enabled = ctx.data.enabled !== false;
+    const part = `.${method}("${arg}")`;
+    return `${input.code}${maybeComment(part, enabled)}`;
   };
 
 // === Field definitions for multi-field nodes (like Distort) ===
@@ -172,8 +182,12 @@ export const nodeDefinitions = {
     outputs: 1,
     compile: (ctx) => {
       const input = ctx.getInput('in-0');
+      const enabled = ctx.data.enabled !== false;
+      const part = '.s()';
       return {
-        code: input ? `${input.code}.s()` : '"bd".s()',
+        code: input
+          ? `${input.code}${maybeComment(part, enabled)}`
+          : '"bd".s()',
         sourceType: 'sound',
         dataNodes: ctx.allDataNodes(),
       };
@@ -192,6 +206,8 @@ export const nodeDefinitions = {
     className: 'w-20',
     compile: (ctx) => {
       const input = ctx.getInput('in-0');
+      const enabled = ctx.data.enabled !== false;
+      if (!enabled && input) return input.code;
       return {
         code: input ? `note(${input.code})` : 'note("c3")',
         sourceType: 'note',
@@ -594,8 +610,10 @@ export const nodeDefinitions = {
       const cycles = ctx.getInput('in-2');
       if (!pattern || !offset || !cycles)
         return { code: '', sourceType: '', dataNodes: [] };
+      const enabled = ctx.data.enabled !== false;
+      const part = `.ribbon(${offset.code}, ${cycles.code})`;
       return {
-        code: `${pattern.code}.ribbon(${offset.code}, ${cycles.code})`,
+        code: `${pattern.code}${maybeComment(part, enabled)}`,
         sourceType: 'ribbon',
         dataNodes: ctx.allDataNodes(),
       };
@@ -617,6 +635,9 @@ export const nodeDefinitions = {
       const indices = ctx.getInput('in-1');
       if (!values || !indices)
         return { code: '', sourceType: '', dataNodes: [] };
+      const enabled = ctx.data.enabled !== false;
+      // pick is a source combinator, bypass returns first input
+      if (!enabled) return values.code;
       return {
         code: `pick(${values.code}, ${indices.code})`,
         sourceType: 'pick',
@@ -639,8 +660,10 @@ export const nodeDefinitions = {
       const struct = ctx.getInput('in-1');
       if (!pattern || !struct)
         return { code: '', sourceType: '', dataNodes: [] };
+      const enabled = ctx.data.enabled !== false;
+      const part = `.struct(${struct.code})`;
       return {
-        code: `${pattern.code}.struct(${struct.code})`,
+        code: `${pattern.code}${maybeComment(part, enabled)}`,
         sourceType: 'struct',
         dataNodes: ctx.allDataNodes(),
       };
@@ -696,13 +719,15 @@ export const nodeDefinitions = {
     compile: (ctx) => {
       const input = ctx.getInput('in-0');
       if (!input) return { code: '', sourceType: '', dataNodes: [] };
+      const enabled = ctx.data.enabled !== false;
       const amount = (ctx.data.amount as number) ?? 2;
       const postgain = (ctx.data.postgain as number) ?? 0.5;
       const mode = (ctx.data.mode as string) || '';
       const distortArg = mode
         ? `"${amount}:${postgain}:${mode}"`
         : `"${amount}:${postgain}"`;
-      return `${input.code}.distort(${distortArg})`;
+      const part = `.distort(${distortArg})`;
+      return `${input.code}${maybeComment(part, enabled)}`;
     },
   },
 
@@ -852,8 +877,10 @@ export const nodeDefinitions = {
     compile: (ctx) => {
       const input = ctx.getInput('in-0');
       if (!input) return { code: '', sourceType: '', dataNodes: [] };
+      const enabled = ctx.data.enabled !== false;
       const bankName = (ctx.data.bank as string) || 'RolandTR808';
-      return `${input.code}.bank("${bankName}")`;
+      const part = `.bank("${bankName}")`;
+      return `${input.code}${maybeComment(part, enabled)}`;
     },
   },
 
@@ -937,9 +964,11 @@ export const nodeDefinitions = {
     compile: (ctx) => {
       const input = ctx.getInput('in-0');
       if (!input) return { code: '', sourceType: '', dataNodes: [] };
+      const enabled = ctx.data.enabled !== false;
       const scaleName = (ctx.data.scale as string) || 'c:minor';
+      const part = `.scale(${MARKER_START}${ctx.nodeId}${MARKER_END}"${scaleName}")`;
       return {
-        code: `${input.code}.scale(${MARKER_START}${ctx.nodeId}${MARKER_END}"${scaleName}")`,
+        code: `${input.code}${maybeComment(part, enabled)}`,
         sourceType: input.sourceType,
         dataNodes: [...input.dataNodes, { id: ctx.nodeId, type: 'scale' }],
       };
@@ -1219,5 +1248,5 @@ export function getDefaultData(type: string): Record<string, unknown> {
     : {};
 
   // Merge with custom defaultData
-  return { ...sliderDefaults, ...(def.defaultData ?? {}) };
+  return { ...sliderDefaults, ...(def.defaultData ?? {}), enabled: true };
 }

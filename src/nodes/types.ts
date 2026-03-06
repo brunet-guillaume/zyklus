@@ -3,11 +3,16 @@ import type { nodeDefinitions } from './nodeDefinitions';
 
 // === Base data types ===
 
+// All nodes have enabled property
+type BaseNodeData = {
+  enabled?: boolean;
+};
+
 // For nodes without any state
-export type SimpleNodeData = Record<string, never>;
+export type SimpleNodeData = BaseNodeData;
 
 // For nodes with slider support (shared by many nodes)
-export type SliderNodeData = {
+export type SliderNodeData = BaseNodeData & {
   value: number;
   min?: number;
   max?: number;
@@ -19,29 +24,29 @@ export type SliderNodeData = {
 
 // === Special node data types ===
 
-export type OutputNodeData = {
+export type OutputNodeData = BaseNodeData & {
   isPlaying: boolean;
 };
 
-export type ValueNodeData = {
+export type ValueNodeData = BaseNodeData & {
   value: string;
 };
 
-export type ArrayNodeData = {
+export type ArrayNodeData = BaseNodeData & {
   inputCount: number;
 };
 
-export type CodeNodeData = {
+export type CodeNodeData = BaseNodeData & {
   code: string;
 };
 
-export type PickNodeData = {
+export type PickNodeData = BaseNodeData & {
   values: string;
   indices: string;
 };
 
 // Standalone slider (different from slider-enabled nodes)
-export type StandaloneSliderNodeData = {
+export type StandaloneSliderNodeData = BaseNodeData & {
   min?: number;
   max?: number;
   value?: number;
@@ -50,22 +55,22 @@ export type StandaloneSliderNodeData = {
 };
 
 // Variable nodes
-export type VarNodeData = {
+export type VarNodeData = BaseNodeData & {
   name: string;
 };
 
 // Bank node
-export type BankNodeData = {
+export type BankNodeData = BaseNodeData & {
   bank: string;
 };
 
 // Scale node
-export type ScaleNodeData = {
+export type ScaleNodeData = BaseNodeData & {
   scale: string;
 };
 
 // Distort node
-export type DistortNodeData = {
+export type DistortNodeData = BaseNodeData & {
   amount: number;
   postgain: number;
   mode: string;
